@@ -1,0 +1,771 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Estado del Subte</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #eef1f3;
+    --surface: #ffffff;
+    --surface-2: #f4f6f7;
+    --ink: #121a21;
+    --ink-secondary: #56636c;
+    --ink-muted: #8a959c;
+    --border: #d7dee3;
+    --accent: #0e7c86;
+    --accent-ink: #ffffff;
+    --accent-bg: #e2f1f2;
+    --good: #1c8a5e;
+    --good-bg: #e5f4ed;
+    --warning: #a9700f;
+    --warning-bg: #fbf0dd;
+    --critical: #b3352f;
+    --critical-bg: #fbe7e5;
+    --linea-a: #009499;
+    --linea-b: #d2261e;
+    --linea-c: #045ca7;
+    --linea-d: #158a4c;
+    --linea-e: #7a2d8c;
+    --linea-h: #b8860a;
+    --shadow: 0 1px 2px rgba(18, 26, 33, 0.06), 0 4px 14px rgba(18, 26, 33, 0.06);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0a1116;
+      --surface: #121a21;
+      --surface-2: #182028;
+      --ink: #e8edf0;
+      --ink-secondary: #a7b2b9;
+      --ink-muted: #6e7a81;
+      --border: #263139;
+      --accent: #3bc7d1;
+      --accent-ink: #06181a;
+      --accent-bg: #113338;
+      --good: #33c289;
+      --good-bg: #10301f;
+      --warning: #e8ac3b;
+      --warning-bg: #35280f;
+      --critical: #e2695f;
+      --critical-bg: #391712;
+      --linea-a: #29a39f;
+      --linea-b: #e73023;
+      --linea-c: #2d7dd2;
+      --linea-d: #20975a;
+      --linea-e: #9f47c2;
+      --linea-h: #a37c0c;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 18px rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0a1116;
+    --surface: #121a21;
+    --surface-2: #182028;
+    --ink: #e8edf0;
+    --ink-secondary: #a7b2b9;
+    --ink-muted: #6e7a81;
+    --border: #263139;
+    --accent: #3bc7d1;
+    --accent-ink: #06181a;
+    --accent-bg: #113338;
+    --good: #33c289;
+    --good-bg: #10301f;
+    --warning: #e8ac3b;
+    --warning-bg: #35280f;
+    --critical: #e2695f;
+    --critical-bg: #391712;
+    --linea-a: #29a39f;
+    --linea-b: #e73023;
+    --linea-c: #2d7dd2;
+    --linea-d: #20975a;
+    --linea-e: #9f47c2;
+    --linea-h: #a37c0c;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 18px rgba(0, 0, 0, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding-inline: 20px;
+    padding-block: max(20px, env(safe-area-inset-top, 0px)) max(28px, env(safe-area-inset-bottom, 0px));
+  }
+
+  .mono { font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace; font-variant-numeric: tabular-nums; }
+
+  .wrap { max-width: 1080px; margin: 0 auto; }
+
+  /* ---------- topbar ---------- */
+  .topbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 22px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+  }
+  .brand { display: flex; flex-direction: column; gap: 2px; }
+  .brand-mark {
+    font-weight: 800;
+    font-size: 1.05rem;
+    letter-spacing: 0.06em;
+    color: var(--ink);
+  }
+  .brand-sub { font-size: 0.8rem; color: var(--ink-secondary); }
+
+  .summary-tiles { display: flex; gap: 10px; flex-wrap: wrap; }
+  .tile {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    min-width: 108px;
+  }
+  .tile .tile-value { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+  .tile .tile-label { font-size: 0.72rem; color: var(--ink-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .tile.status-good .tile-value { color: var(--good); }
+  .tile.status-warning .tile-value { color: var(--warning); }
+  .tile.status-critical .tile-value { color: var(--critical); }
+
+  /* ---------- tabs ---------- */
+  .tabs { display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .tab {
+    appearance: none; border: none; background: transparent; cursor: pointer;
+    font-family: inherit; font-size: 0.92rem; font-weight: 600; color: var(--ink-secondary);
+    padding: 10px 16px; border-radius: 10px 10px 0 0; position: relative; top: 1px;
+  }
+  .tab[aria-selected="true"] {
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom-color: var(--surface);
+  }
+  .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+  }
+  .card h2 { margin: 0 0 4px; font-size: 1rem; font-weight: 700; }
+  .card .hint { margin: 0 0 14px; font-size: 0.82rem; color: var(--ink-secondary); }
+
+  /* ---------- estado actual ---------- */
+  .linea-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 0.72rem;
+    padding: 3px 8px; border-radius: 999px; color: var(--accent-ink);
+    white-space: nowrap;
+  }
+  .linea-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
+
+  .problema-list { display: flex; flex-direction: column; gap: 8px; }
+  .problema-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px 14px;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--critical-bg);
+    border: 1px solid color-mix(in srgb, var(--critical) 35%, transparent);
+  }
+  .problema-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .problema-main .titulo { font-weight: 600; font-size: 0.9rem; }
+  .problema-main .desc { font-size: 0.78rem; color: var(--ink-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .problema-since { font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; color: var(--critical); white-space: nowrap; }
+
+  .all-ok {
+    display: flex; align-items: center; gap: 10px;
+    padding: 16px; border-radius: 10px; background: var(--good-bg);
+    border: 1px solid color-mix(in srgb, var(--good) 35%, transparent);
+    color: var(--good); font-weight: 600;
+  }
+
+  .linea-section { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
+  .linea-section summary {
+    cursor: pointer; list-style: none; display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px; background: var(--surface-2); font-weight: 700; font-size: 0.88rem;
+  }
+  .linea-section summary::-webkit-details-marker { display: none; }
+  .linea-section summary .caret { margin-left: auto; color: var(--ink-muted); font-size: 0.8rem; }
+  .linea-section summary .count { font-family: "IBM Plex Mono", monospace; font-weight: 500; color: var(--ink-secondary); font-size: 0.78rem; }
+
+  .estacion-grid { padding: 12px 14px; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+  .estacion-block { border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: var(--surface); }
+  .estacion-block .est-name { font-weight: 600; font-size: 0.84rem; margin-bottom: 6px; }
+  .acceso-row { display: flex; align-items: center; gap: 6px; font-size: 0.76rem; padding: 2px 0; color: var(--ink-secondary); }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .status-dot.ok { background: var(--good); }
+  .status-dot.down { background: var(--critical); }
+  .acceso-row.down { color: var(--critical); font-weight: 500; }
+  .acceso-code { font-family: "IBM Plex Mono", monospace; font-weight: 600; }
+
+  /* ---------- historico ---------- */
+  .interval-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .interval-btn {
+    appearance: none; cursor: pointer; font-family: inherit; font-size: 0.8rem; font-weight: 600;
+    padding: 7px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); color: var(--ink-secondary);
+  }
+  .interval-btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+  .chart-wrap { margin-bottom: 16px; }
+  .chart-wrap svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .bar { fill: var(--accent); }
+  .bar-tooltip { pointer-events: none; }
+
+  .evento-list { display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--border); }
+  .evento-row {
+    display: grid; grid-template-columns: auto 1fr auto; gap: 10px 14px; align-items: center;
+    padding: 10px 4px; border-bottom: 1px solid var(--border);
+  }
+  .pill { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+  .pill.down { background: var(--critical-bg); color: var(--critical); }
+  .pill.up { background: var(--good-bg); color: var(--good); }
+  .evento-main .titulo { font-weight: 600; font-size: 0.86rem; }
+  .evento-main .desc { font-size: 0.76rem; color: var(--ink-secondary); }
+  .evento-time { font-family: "IBM Plex Mono", monospace; font-size: 0.74rem; color: var(--ink-muted); text-align: right; white-space: nowrap; }
+
+  .empty-state { padding: 24px; text-align: center; color: var(--ink-muted); font-size: 0.86rem; }
+
+  /* ---------- mapa ---------- */
+  .mapa-layout { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  .mapa-svg-box { position: relative; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); padding: 10px; }
+  .estacion-point { cursor: pointer; }
+  .estacion-point circle.fill { transition: r 0.1s ease; }
+  .estacion-point:hover circle.fill { r: 9; }
+
+  .legend-row { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; }
+  .legend-group { display: flex; flex-direction: column; gap: 6px; }
+  .legend-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-muted); font-weight: 600; }
+  .legend-items { display: flex; gap: 10px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.76rem; color: var(--ink-secondary); }
+  .legend-swatch { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .legend-ring { width: 10px; height: 10px; border-radius: 50%; border: 2px solid; flex: none; background: transparent; }
+
+  #map-tooltip {
+    position: absolute; pointer-events: none; z-index: 5;
+    background: var(--ink); color: var(--bg);
+    font-size: 0.76rem; padding: 8px 10px; border-radius: 8px;
+    box-shadow: var(--shadow); max-width: 220px; line-height: 1.4;
+  }
+  :root[data-theme="dark"] #map-tooltip, @media (prefers-color-scheme: dark) { }
+  #map-tooltip strong { display: block; font-weight: 700; margin-bottom: 2px; }
+  #map-tooltip .mono { opacity: 0.85; }
+
+  .loading, .error-banner { padding: 16px; text-align: center; color: var(--ink-muted); font-size: 0.85rem; }
+  .error-banner { color: var(--critical); background: var(--critical-bg); border-radius: 10px; }
+
+  footer { text-align: center; font-size: 0.76rem; color: var(--ink-muted); margin-top: 8px; }
+  footer a { color: var(--accent); }
+
+  @media (max-width: 520px) {
+    .summary-tiles { width: 100%; }
+    .tile { flex: 1 1 auto; min-width: 0; }
+    .problema-row, .evento-row { grid-template-columns: 1fr; }
+    .problema-since, .evento-time { text-align: left; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">ACCESIBILIDAD SUBTE</span>
+      <span class="brand-sub" id="brand-sub">Cargando datos en vivo…</span>
+    </div>
+    <div class="summary-tiles" id="summary-tiles"></div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab" data-tab="actual" role="tab" aria-selected="true">Estado actual</button>
+    <button class="tab" data-tab="historico" role="tab" aria-selected="false">Histórico</button>
+    <button class="tab" data-tab="mapa" role="tab" aria-selected="false">Mapa</button>
+  </nav>
+
+  <main>
+    <section id="panel-actual" class="panel active">
+      <div class="card">
+        <h2>Accesos con problemas ahora</h2>
+        <p class="hint">Ascensores y escaleras mecánicas reportados como fuera de servicio en la última consulta.</p>
+        <div id="problemas-container"><div class="loading">Cargando…</div></div>
+      </div>
+      <div class="card">
+        <h2>Estado completo por línea</h2>
+        <p class="hint">Desplegá cada línea para ver todos sus accesos.</p>
+        <div id="lineas-container"><div class="loading">Cargando…</div></div>
+      </div>
+    </section>
+
+    <section id="panel-historico" class="panel">
+      <div class="card">
+        <h2>Cambios de estado</h2>
+        <p class="hint">Elegí un rango para ver qué accesos cambiaron de estado en ese período.</p>
+        <div class="interval-row" id="interval-row"></div>
+        <div class="chart-wrap" id="chart-container"></div>
+        <div id="eventos-container"><div class="loading">Elegí un rango para empezar…</div></div>
+      </div>
+    </section>
+
+    <section id="panel-mapa" class="panel">
+      <div class="card">
+        <h2>Mapa de estaciones</h2>
+        <p class="hint">Color = porcentaje de accesos funcionando ahora en esa estación. Borde = línea.</p>
+        <div class="mapa-layout">
+          <div class="mapa-svg-box" id="mapa-svg-box"><div class="loading">Cargando…</div></div>
+        </div>
+        <div class="legend-row">
+          <div class="legend-group">
+            <span class="legend-title">Estado</span>
+            <div class="legend-items">
+              <span class="legend-item"><span class="legend-swatch" style="background:var(--good)"></span>Todo ok</span>
+              <span class="legend-item"><span class="legend-swatch" style="background:var(--warning)"></span>Parcial</span>
+              <span class="legend-item"><span class="legend-swatch" style="background:var(--critical)"></span>Todo caído</span>
+            </div>
+          </div>
+          <div class="legend-group">
+            <span class="legend-title">Línea</span>
+            <div class="legend-items" id="legend-lineas"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    Fuente: API pública de accesibilidad de EMOVA · datos propios recolectados cada 5 min ·
+    <a href="https://github.com/juanfere/accesibilidad_subte" target="_blank" rel="noopener">código</a>
+  </footer>
+</div>
+
+<div id="map-tooltip" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var SUPABASE_URL = "https://hcomeroufunfgntuioig.supabase.co";
+  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhjb21lcm91ZnVuZmdudHVpb2lnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwMjkyNzQsImV4cCI6MjEwNTYwNTI3NH0.TXrdSgDy8GT2HF8chWjwroh4i2L3CwAlcrkfETjHLoA";
+
+  var LINEA_COLOR_VAR = { A: "--linea-a", B: "--linea-b", C: "--linea-c", D: "--linea-d", E: "--linea-e", H: "--linea-h" };
+
+  var ESTACIONES_COORDS = {"A|Acoyte":{"lon":-58.43642989126413,"lat":-34.618279061088415,"nombre_oficial":"Acoyte"},"A|Carabobo":{"lon":-58.45671024455198,"lat":-34.626665595345294,"nombre_oficial":"Carabobo"},"A|Castro Barros":{"lon":-58.42181769657279,"lat":-34.61176939995314,"nombre_oficial":"Castro Barros"},"A|Congreso":{"lon":-58.392672097001295,"lat":-34.60922477063858,"nombre_oficial":"Congreso - Pdte. Dr. Raúl Alfonsín"},"A|Lima":{"lon":-58.382236114316925,"lat":-34.60909884479506,"nombre_oficial":"Lima"},"A|Loria":{"lon":-58.41518802065098,"lat":-34.610780851367856,"nombre_oficial":"Loria"},"A|Perú":{"lon":-58.3742717794385,"lat":-34.608558085581826,"nombre_oficial":"Peru"},"A|Piedras":{"lon":-58.37908900065684,"lat":-34.60888074907816,"nombre_oficial":"Piedras"},"A|Plaza Miserere":{"lon":-58.40670979270381,"lat":-34.60981638710716,"nombre_oficial":"Plaza De Miserere"},"A|Plaza de Mayo":{"lon":-58.370972689307145,"lat":-34.60880929908102,"nombre_oficial":"Plaza De Mayo"},"A|Primera Junta":{"lon":-58.44117877203333,"lat":-34.62040428161419,"nombre_oficial":"Primera Junta"},"A|Puan":{"lon":-58.44864846354647,"lat":-34.6235279870421,"nombre_oficial":"Puan"},"A|Saenz Peña":{"lon":-58.38678071351404,"lat":-34.60941163979187,"nombre_oficial":"Saenz Peña"},"A|San José de Flores":{"lon":-58.463540652225156,"lat":-34.629086207306415,"nombre_oficial":"San José De Flores"},"A|San Pedrito":{"lon":-58.469639501989754,"lat":-34.63070606055325,"nombre_oficial":"San Pedrito"},"B|Callao":{"lon":-58.39231755671001,"lat":-34.604418737076664,"nombre_oficial":"Callao - Maestro Alfredo Bravo"},"B|Carlos Gardel":{"lon":-58.41176510373516,"lat":-34.604078814375725,"nombre_oficial":"Carlos Gardel"},"B|Carlos Pellegrini":{"lon":-58.38071866341278,"lat":-34.60363626062853,"nombre_oficial":"C. Pellegrini"},"B|De Los Incas Parque Chas":{"lon":-58.47424086083075,"lat":-34.58124896974297,"nombre_oficial":"De Los Incas - Pque. Chas"},"B|Dorrego":{"lon":-58.44757417574107,"lat":-34.59171790789488,"nombre_oficial":"Dorrego"},"B|Echeverría":{"lon":-58.48101327779952,"lat":-34.57779761324633,"nombre_oficial":"Echeverría - Mártires Palotinos"},"B|Federico Lacroze":{"lon":-58.455030087707556,"lat":-34.58719774686522,"nombre_oficial":"Federico Lacroze"},"B|Florida":{"lon":-58.37507557490589,"lat":-34.60329642125253,"nombre_oficial":"Florida"},"B|Juan Manuel de Rosas Villa Urquiza":{"lon":-58.486384920729684,"lat":-34.574319255623145,"nombre_oficial":"Juan Manuel De Rosas - Villa Urquiza"},"B|Leandro N. Alem":{"lon":-58.36993412575747,"lat":-34.60298861426501,"nombre_oficial":"Leandro N. Alem"},"B|Malabia O. Pugliese":{"lon":-58.439772858444194,"lat":-34.59896691493091,"nombre_oficial":"Malabia - Osvaldo Pugliese"},"B|Medrano Almagro":{"lon":-58.42096459307871,"lat":-34.60316426400566,"nombre_oficial":"Almagro - Medrano"},"B|Pasteur AMIA":{"lon":-58.39947727482585,"lat":-34.60464219201641,"nombre_oficial":"Pasteur - Amia"},"B|Pueyrredón":{"lon":-58.405402208624345,"lat":-34.6045803098221,"nombre_oficial":"Pueyrredon"},"B|Tronador Villa Ortúzar":{"lon":-58.46622755654512,"lat":-34.58409463968795,"nombre_oficial":"Tronador - Villa Ortúzar"},"B|Uruguay":{"lon":-58.38729966906588,"lat":-34.604092730256646,"nombre_oficial":"Uruguay"},"B|Ángel Gallardo":{"lon":-58.431275555639985,"lat":-34.60216166561987,"nombre_oficial":"Angel Gallardo"},"C|Avenida de Mayo":{"lon":-58.38061450046986,"lat":-34.60898234787075,"nombre_oficial":"Av. De Mayo"},"C|Constitución":{"lon":-58.38143804863668,"lat":-34.627618063975376,"nombre_oficial":"Constitucion"},"C|Diagonal Norte":{"lon":-58.37953383769559,"lat":-34.60484286205875,"nombre_oficial":"Diagonal Norte"},"C|Gral. San Martín":{"lon":-58.37782305054521,"lat":-34.59505674176369,"nombre_oficial":"San Martin"},"C|Independencia":{"lon":-58.38017734615888,"lat":-34.618124421551606,"nombre_oficial":"Independencia"},"C|Lavalle":{"lon":-58.378159720315566,"lat":-34.60176910856247,"nombre_oficial":"Lavalle"},"C|Mariano Moreno":{"lon":-58.380448233244984,"lat":-34.612616229073836,"nombre_oficial":"Moreno"},"C|Retiro":{"lon":-58.37402240381632,"lat":-34.59119321488052,"nombre_oficial":"Retiro"},"C|San Juan":{"lon":-58.379924898124486,"lat":-34.62191546671289,"nombre_oficial":"San Juan"},"D|9 de Julio":{"lon":-58.38057816074685,"lat":-34.60424434385433,"nombre_oficial":"9 De Julio"},"D|Agüero":{"lon":-58.407164107307096,"lat":-34.59162740214711,"nombre_oficial":"Agüero"},"D|Bulnes":{"lon":-58.41129653856202,"lat":-34.58823676433706,"nombre_oficial":"Bulnes"},"D|Callao":{"lon":-58.3931285025438,"lat":-34.59963885960583,"nombre_oficial":"Callao"},"D|Catedral":{"lon":-58.373959878509574,"lat":-34.6078013639001,"nombre_oficial":"Catedral"},"D|Congreso Tucumán":{"lon":-58.462379126412664,"lat":-34.555642414974905,"nombre_oficial":"Congreso De Tucuman"},"D|Facultad de Medicina":{"lon":-58.39792687400386,"lat":-34.59975640870826,"nombre_oficial":"Facultad De Medicina"},"D|José Hernández":{"lon":-58.452126677649765,"lat":-34.56621559971072,"nombre_oficial":"Jose Hernandez"},"D|Juramento":{"lon":-58.45649005303586,"lat":-34.56230955488594,"nombre_oficial":"Juramento"},"D|Ministro Carranza":{"lon":-58.435015264738354,"lat":-34.57517843366268,"nombre_oficial":"Ministro Carranza - Miguel Abuelo"},"D|Olleros":{"lon":-58.444669509559354,"lat":-34.57001254234762,"nombre_oficial":"Olleros"},"D|Palermo":{"lon":-58.42571354086816,"lat":-34.578421972901005,"nombre_oficial":"Palermo"},"D|Plaza Italia":{"lon":-58.421198278781375,"lat":-34.5814110535123,"nombre_oficial":"Plaza Italia"},"D|Pueyrredón":{"lon":-58.40239831055495,"lat":-34.59442518997953,"nombre_oficial":"Pueyrredon"},"D|Tribunales – Teatro Colón":{"lon":-58.38514600302589,"lat":-34.601586388942174,"nombre_oficial":"Tribunales - Teatro Colón"},"E|Av. La Plata":{"lon":-58.426790729105825,"lat":-34.627014314357936,"nombre_oficial":"Av. La Plata"},"E|Belgrano":{"lon":-58.37758476922805,"lat":-34.61284803582894,"nombre_oficial":"Belgrano"},"E|Boedo":{"lon":-58.415535011684995,"lat":-34.62536493574887,"nombre_oficial":"Boedo"},"E|Bolívar":{"lon":-58.37368829690775,"lat":-34.60924142215441,"nombre_oficial":"Bolivar"},"E|Catalinas":{"lon":-58.37166923805774,"lat":-34.596623004422035,"nombre_oficial":"Catalinas"},"E|Correo Central":{"lon":-58.37056106331843,"lat":-34.60311060328679,"nombre_oficial":"Correo Central"},"E|Emilio Mitre":{"lon":-58.44217173462012,"lat":-34.63104067307458,"nombre_oficial":"Emilio Mitre"},"E|Entre Ríos":{"lon":-58.39151492466532,"lat":-34.62271843890065,"nombre_oficial":"Entre Rios - Rodolfo Walsh"},"E|Gral. Urquiza":{"lon":-58.4093932402834,"lat":-34.62465260251508,"nombre_oficial":"Urquiza"},"E|Independencia":{"lon":-58.381538621328296,"lat":-34.617936227173786,"nombre_oficial":"Independencia - Beata Mama Antula"},"E|Jujuy":{"lon":-58.40293931492661,"lat":-34.62386451404442,"nombre_oficial":"Jujuy"},"E|Medalla Milagrosa":{"lon":-58.45027890468544,"lat":-34.63638793805377,"nombre_oficial":"Medalla Milagrosa"},"E|Moreno":{"lon":-58.43381765291902,"lat":-34.62801640771465,"nombre_oficial":"Jose Maria Moreno"},"E|Pichincha":{"lon":-58.39707106223341,"lat":-34.62310865679827,"nombre_oficial":"Pichincha"},"E|Retiro":{"lon":-58.37572458013492,"lat":-34.59217655867434,"nombre_oficial":"Retiro"},"E|San José":{"lon":-58.38515204539739,"lat":-34.622338242309205,"nombre_oficial":"San Jose"},"E|Varela":{"lon":-58.45789205604037,"lat":-34.64013605282059,"nombre_oficial":"Varela"},"H|Caseros":{"lon":-58.398930404056664,"lat":-34.63574869190404,"nombre_oficial":"Caseros"},"H|Corrientes":{"lon":-58.40545309576947,"lat":-34.60448945839987,"nombre_oficial":"Corrientes"},"H|Córdoba":{"lon":-58.40372437975688,"lat":-34.59845449773643,"nombre_oficial":"Córdoba"},"H|Facultad de Derecho":{"lon":-58.39102235543635,"lat":-34.58303601541506,"nombre_oficial":"Facultad De Derecho - Julieta Lanteri"},"H|Hospitales":{"lon":-58.41238736270171,"lat":-34.64126739478943,"nombre_oficial":"Hospitales - Ringo Bonavena"},"H|Humberto 1°":{"lon":-58.40232549651671,"lat":-34.62309113761142,"nombre_oficial":"Humberto 1°"},"H|Inclán Mezquita Al Ahmad":{"lon":-58.400972334211815,"lat":-34.629374324650314,"nombre_oficial":"Inclan - Mezquita Al Ahmad"},"H|Las Heras":{"lon":-58.397218811204326,"lat":-34.58746115122622,"nombre_oficial":"Las Heras"},"H|Once – 30 de Diciembre":{"lon":-58.40603909181976,"lat":-34.60893439989664,"nombre_oficial":"Once - 30 De Diciembre"},"H|Parque Patricios":{"lon":-58.405797335978185,"lat":-34.63840447279842,"nombre_oficial":"Parque Patricios"},"H|Santa Fe - Carlos Jáuregui":{"lon":-58.40232564194708,"lat":-34.59438501065232,"nombre_oficial":"Santa Fe - Carlos Jauregui"},"H|Venezuela":{"lon":-58.404734437166375,"lat":-34.61524116028971,"nombre_oficial":"Venezuela"}};
+
+  function lineaColor(codigo) {
+    var v = LINEA_COLOR_VAR[codigo];
+    return v ? getComputedStyle(document.documentElement).getPropertyValue(v).trim() : "#888";
+  }
+
+  function lineaCode(nombreLinea) {
+    return (nombreLinea || "").replace("Línea ", "").trim();
+  }
+
+  function statusBucket(pct) {
+    if (pct >= 100) return "good";
+    if (pct >= 50) return "warning";
+    return "critical";
+  }
+
+  function relTime(iso) {
+    var diffMs = Date.now() - new Date(iso).getTime();
+    var mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return "hace instantes";
+    if (mins < 60) return "hace " + mins + " min";
+    var hrs = Math.floor(mins / 60);
+    var remMins = mins % 60;
+    if (hrs < 24) return "hace " + hrs + "h " + remMins + "m";
+    var days = Math.floor(hrs / 24);
+    return "hace " + days + (days === 1 ? " día" : " días");
+  }
+
+  function fmtTime(iso) {
+    var d = new Date(iso);
+    return d.toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  async function supaGet(path) {
+    var res = await fetch(SUPABASE_URL + "/rest/v1/" + path, {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: "Bearer " + SUPABASE_ANON_KEY
+      }
+    });
+    if (!res.ok) {
+      var body = await res.text();
+      throw new Error("Supabase " + res.status + ": " + body);
+    }
+    return res.json();
+  }
+
+  /* ---------------- tabs ---------------- */
+  var tabs = document.querySelectorAll(".tab");
+  var panels = { actual: document.getElementById("panel-actual"), historico: document.getElementById("panel-historico"), mapa: document.getElementById("panel-mapa") };
+  tabs.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      tabs.forEach(function (b) { b.setAttribute("aria-selected", "false"); });
+      Object.keys(panels).forEach(function (k) { panels[k].classList.remove("active"); });
+      btn.setAttribute("aria-selected", "true");
+      panels[btn.dataset.tab].classList.add("active");
+      if (btn.dataset.tab === "historico" && !window.__historicoLoaded) {
+        window.__historicoLoaded = true;
+        setInterval_(currentIntervalKey);
+      }
+      if (btn.dataset.tab === "mapa" && window.__estadoRows) {
+        renderMapa(window.__estadoRows);
+      }
+    });
+  });
+
+  /* ---------------- estado actual + resumen ---------------- */
+
+  function renderSummary(rows) {
+    var total = rows.length;
+    var ok = rows.filter(function (r) { return r.funcionando; }).length;
+    var caidos = total - ok;
+    var pct = total ? Math.round((ok / total) * 100) : 0;
+    var bucket = statusBucket(pct);
+
+    var maxConsulta = rows.reduce(function (acc, r) {
+      return r.ultima_consulta > acc ? r.ultima_consulta : acc;
+    }, "");
+
+    document.getElementById("brand-sub").textContent = maxConsulta ? "Última consulta: " + fmtTime(maxConsulta) + " (" + relTime(maxConsulta) + ")" : "Sin datos";
+
+    document.getElementById("summary-tiles").innerHTML =
+      '<div class="tile status-' + bucket + '"><span class="tile-value mono">' + pct + '%</span><span class="tile-label">Funcionando</span></div>' +
+      '<div class="tile"><span class="tile-value mono">' + total + '</span><span class="tile-label">Accesos totales</span></div>' +
+      '<div class="tile status-' + (caidos > 0 ? "critical" : "good") + '"><span class="tile-value mono">' + caidos + '</span><span class="tile-label">Caídos ahora</span></div>';
+  }
+
+  function renderProblemas(rows) {
+    var caidos = rows.filter(function (r) { return !r.funcionando; })
+      .sort(function (a, b) { return a.ultimo_cambio < b.ultimo_cambio ? 1 : -1; });
+
+    var container = document.getElementById("problemas-container");
+
+    if (caidos.length === 0) {
+      container.innerHTML = '<div class="all-ok">Todos los accesos relevados están funcionando.</div>';
+      return;
+    }
+
+    container.innerHTML = '<div class="problema-list">' + caidos.map(function (r) {
+      var codigo = lineaCode(r.linea);
+      return '<div class="problema-row">' +
+        '<span class="linea-chip" style="background:' + lineaColor(codigo) + '"><span class="linea-dot"></span>' + escapeHtml(codigo) + '</span>' +
+        '<div class="problema-main">' +
+          '<span class="titulo">' + escapeHtml(r.estacion) + ' · <span class="mono">' + escapeHtml(r.nombre) + '</span></span>' +
+          '<span class="desc">' + escapeHtml(r.descripcion || "") + '</span>' +
+        '</div>' +
+        '<span class="problema-since">' + relTime(r.ultimo_cambio) + '</span>' +
+      '</div>';
+    }).join("") + '</div>';
+  }
+
+  function renderLineas(rows) {
+    var porLinea = {};
+    rows.forEach(function (r) {
+      var codigo = lineaCode(r.linea);
+      porLinea[codigo] = porLinea[codigo] || {};
+      porLinea[codigo][r.estacion] = porLinea[codigo][r.estacion] || [];
+      porLinea[codigo][r.estacion].push(r);
+    });
+
+    var codigos = Object.keys(porLinea).sort();
+    var html = codigos.map(function (codigo) {
+      var estaciones = Object.keys(porLinea[codigo]).sort();
+      var totalAccesos = estaciones.reduce(function (n, e) { return n + porLinea[codigo][e].length; }, 0);
+      var caidosLinea = estaciones.reduce(function (n, e) {
+        return n + porLinea[codigo][e].filter(function (a) { return !a.funcionando; }).length;
+      }, 0);
+
+      var estacionesHtml = estaciones.map(function (est) {
+        var accesos = porLinea[codigo][est].sort(function (a, b) { return a.nombre.localeCompare(b.nombre); });
+        var rowsHtml = accesos.map(function (a) {
+          return '<div class="acceso-row ' + (a.funcionando ? "" : "down") + '">' +
+            '<span class="status-dot ' + (a.funcionando ? "ok" : "down") + '"></span>' +
+            '<span class="acceso-code">' + escapeHtml(a.nombre) + '</span>' +
+            '<span>' + escapeHtml(a.funcionando ? "OK" : "Fuera de servicio") + '</span>' +
+          '</div>';
+        }).join("");
+        return '<div class="estacion-block"><div class="est-name">' + escapeHtml(est) + '</div>' + rowsHtml + '</div>';
+      }).join("");
+
+      return '<details class="linea-section">' +
+        '<summary><span class="linea-chip" style="background:' + lineaColor(codigo) + '"><span class="linea-dot"></span>Línea ' + escapeHtml(codigo) + '</span>' +
+        '<span class="count">' + totalAccesos + ' accesos' + (caidosLinea ? " · " + caidosLinea + " caídos" : "") + '</span>' +
+        '<span class="caret">▾</span></summary>' +
+        '<div class="estacion-grid">' + estacionesHtml + '</div>' +
+      '</details>';
+    }).join("");
+
+    document.getElementById("lineas-container").innerHTML = html;
+  }
+
+  /* ---------------- historico ---------------- */
+
+  var INTERVALS = [
+    { key: "1h", label: "1 hora", ms: 3600e3 },
+    { key: "6h", label: "6 horas", ms: 6 * 3600e3 },
+    { key: "24h", label: "24 horas", ms: 24 * 3600e3 },
+    { key: "7d", label: "7 días", ms: 7 * 24 * 3600e3 },
+    { key: "30d", label: "30 días", ms: 30 * 24 * 3600e3 },
+    { key: "all", label: "Todo", ms: null }
+  ];
+  var currentIntervalKey = "24h";
+
+  document.getElementById("interval-row").innerHTML = INTERVALS.map(function (iv) {
+    return '<button class="interval-btn" data-key="' + iv.key + '" aria-pressed="' + (iv.key === currentIntervalKey) + '">' + iv.label + '</button>';
+  }).join("");
+
+  document.querySelectorAll(".interval-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll(".interval-btn").forEach(function (b) { b.setAttribute("aria-pressed", "false"); });
+      btn.setAttribute("aria-pressed", "true");
+      currentIntervalKey = btn.dataset.key;
+      setInterval_(currentIntervalKey);
+    });
+  });
+
+  async function setInterval_(key) {
+    var iv = INTERVALS.filter(function (i) { return i.key === key; })[0];
+    var container = document.getElementById("eventos-container");
+    var chartContainer = document.getElementById("chart-container");
+    container.innerHTML = '<div class="loading">Cargando…</div>';
+    chartContainer.innerHTML = "";
+
+    var query = "historial_legible?select=*&order=timestamp.desc&limit=1000";
+    if (iv.ms) {
+      var cutoff = new Date(Date.now() - iv.ms).toISOString();
+      query += "&timestamp=gte." + encodeURIComponent(cutoff);
+    }
+
+    try {
+      var eventos = await supaGet(query);
+      renderChart(eventos, iv);
+      renderEventos(eventos, iv);
+    } catch (err) {
+      container.innerHTML = '<div class="error-banner">No se pudo cargar el histórico: ' + escapeHtml(err.message) + '</div>';
+    }
+  }
+
+  function renderChart(eventos, iv) {
+    var chartContainer = document.getElementById("chart-container");
+    if (eventos.length === 0) { chartContainer.innerHTML = ""; return; }
+
+    var porHora = (iv.key === "1h" || iv.key === "6h" || iv.key === "24h");
+    var bucketMs = porHora ? 3600e3 : 24 * 3600e3;
+
+    var buckets = {};
+    eventos.forEach(function (e) {
+      var t = new Date(e.timestamp).getTime();
+      var b = Math.floor(t / bucketMs) * bucketMs;
+      buckets[b] = (buckets[b] || 0) + 1;
+    });
+
+    var keys = Object.keys(buckets).map(Number).sort(function (a, b) { return a - b; });
+    if (keys.length < 2) { chartContainer.innerHTML = ""; return; }
+
+    var maxVal = Math.max.apply(null, keys.map(function (k) { return buckets[k]; }));
+    var W = 640, H = 140, padL = 6, padR = 6, padT = 10, padB = 24;
+    var barGap = 2;
+    var barW = Math.max(2, (W - padL - padR) / keys.length - barGap);
+
+    var bars = keys.map(function (k, i) {
+      var v = buckets[k];
+      var h = maxVal ? (v / maxVal) * (H - padT - padB) : 0;
+      var x = padL + i * ((W - padL - padR) / keys.length);
+      var y = H - padB - h;
+      var label = porHora
+        ? new Date(k).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })
+        : new Date(k).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" });
+      return '<g class="bar-g"><rect class="bar" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + Math.max(h, 1).toFixed(1) + '" rx="3"><title>' + label + ': ' + v + ' cambio' + (v === 1 ? "" : "s") + '</title></rect></g>';
+    }).join("");
+
+    var firstLabel = porHora
+      ? new Date(keys[0]).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })
+      : new Date(keys[0]).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" });
+    var lastLabel = porHora
+      ? new Date(keys[keys.length - 1]).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })
+      : new Date(keys[keys.length - 1]).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" });
+
+    chartContainer.innerHTML =
+      '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Cambios de estado por ' + (porHora ? "hora" : "día") + '">' +
+      '<line x1="' + padL + '" y1="' + (H - padB) + '" x2="' + (W - padR) + '" y2="' + (H - padB) + '" stroke="var(--border)" stroke-width="1"/>' +
+      bars +
+      '<text x="' + padL + '" y="' + (H - 6) + '" font-size="10" fill="var(--ink-muted)" font-family="IBM Plex Mono, monospace">' + firstLabel + '</text>' +
+      '<text x="' + (W - padR) + '" y="' + (H - 6) + '" font-size="10" fill="var(--ink-muted)" text-anchor="end" font-family="IBM Plex Mono, monospace">' + lastLabel + '</text>' +
+      '</svg>';
+  }
+
+  function renderEventos(eventos, iv) {
+    var container = document.getElementById("eventos-container");
+    if (eventos.length === 0) {
+      container.innerHTML = '<div class="empty-state">Ningún cambio de estado registrado en las últimas ' + iv.label.toLowerCase() + '.</div>';
+      return;
+    }
+    var limitado = eventos.length >= 1000;
+    var html = '<div class="evento-list">' + eventos.map(function (e) {
+      var codigo = lineaCode(e.linea);
+      var subio = e.funcionando_nuevo === true;
+      return '<div class="evento-row">' +
+        '<span class="pill ' + (subio ? "up" : "down") + '">' + (subio ? "SE RECUPERÓ" : "CAYÓ") + '</span>' +
+        '<div class="evento-main">' +
+          '<span class="titulo"><span class="linea-chip" style="background:' + lineaColor(codigo) + '"><span class="linea-dot"></span>' + escapeHtml(codigo) + '</span> ' + escapeHtml(e.estacion) + ' · <span class="mono">' + escapeHtml(e.nombre) + '</span></span>' +
+          '<span class="desc">' + escapeHtml(e.descripcion || "") + '</span>' +
+        '</div>' +
+        '<span class="evento-time">' + fmtTime(e.timestamp) + '</span>' +
+      '</div>';
+    }).join("") + '</div>';
+
+    if (limitado) {
+      html = '<div class="hint" style="margin-bottom:10px">Mostrando los últimos 1000 cambios del rango elegido, puede haber más.</div>' + html;
+    }
+    container.innerHTML = html;
+  }
+
+  /* ---------------- mapa ---------------- */
+
+  function renderMapa(rows) {
+    var box = document.getElementById("mapa-svg-box");
+
+    var porEstacion = {};
+    rows.forEach(function (r) {
+      var codigo = lineaCode(r.linea);
+      var key = codigo + "|" + r.estacion;
+      porEstacion[key] = porEstacion[key] || { codigo: codigo, estacion: r.estacion, total: 0, ok: 0 };
+      porEstacion[key].total++;
+      if (r.funcionando) porEstacion[key].ok++;
+    });
+
+    var puntos = Object.keys(porEstacion).map(function (key) {
+      var coords = ESTACIONES_COORDS[key];
+      if (!coords) return null;
+      var agg = porEstacion[key];
+      var pct = agg.total ? Math.round((agg.ok / agg.total) * 100) : 100;
+      return {
+        key: key, codigo: agg.codigo, estacion: agg.estacion,
+        total: agg.total, ok: agg.ok, pct: pct,
+        lon: coords.lon, lat: coords.lat
+      };
+    }).filter(Boolean);
+
+    if (puntos.length === 0) {
+      box.innerHTML = '<div class="empty-state">No se pudieron ubicar estaciones en el mapa.</div>';
+      return;
+    }
+
+    var lats = puntos.map(function (p) { return p.lat; });
+    var lons = puntos.map(function (p) { return p.lon; });
+    var latMin = Math.min.apply(null, lats), latMax = Math.max.apply(null, lats);
+    var lonMin = Math.min.apply(null, lons), lonMax = Math.max.apply(null, lons);
+    var latMid = ((latMin + latMax) / 2) * Math.PI / 180;
+    var cosLat = Math.cos(latMid);
+    var xSpan = (lonMax - lonMin) * cosLat;
+    var ySpan = latMax - latMin;
+
+    var W = 640, pad = 34;
+    var H = pad * 2 + (W - pad * 2) * (ySpan / xSpan);
+
+    function px(lon) { return pad + ((lon - lonMin) * cosLat / xSpan) * (W - pad * 2); }
+    function py(lat) { return pad + ((latMax - lat) / ySpan) * (H - pad * 2); }
+
+    var statusVar = { good: "var(--good)", warning: "var(--warning)", critical: "var(--critical)" };
+
+    var circles = puntos.map(function (p) {
+      var bucket = statusBucket(p.pct);
+      var cx = px(p.lon).toFixed(1), cy = py(p.lat).toFixed(1);
+      var stroke = lineaColor(p.codigo);
+      return '<g class="estacion-point" data-key="' + p.key + '" tabindex="0">' +
+        '<circle cx="' + cx + '" cy="' + cy + '" r="9" fill="transparent"></circle>' +
+        '<circle class="fill" cx="' + cx + '" cy="' + cy + '" r="6.5" fill="' + statusVar[bucket] + '" stroke="' + stroke + '" stroke-width="2"></circle>' +
+      '</g>';
+    }).join("");
+
+    box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H.toFixed(1) + '" role="img" aria-label="Mapa de estaciones del subte con porcentaje de accesos funcionando" style="width:100%;height:auto;display:block">' + circles + '</svg>';
+
+    var tooltip = document.getElementById("map-tooltip");
+    var puntosPorKey = {};
+    puntos.forEach(function (p) { puntosPorKey[p.key] = p; });
+
+    box.querySelectorAll(".estacion-point").forEach(function (el) {
+      el.addEventListener("mousemove", function (ev) {
+        var p = puntosPorKey[el.dataset.key];
+        var boxRect = box.getBoundingClientRect();
+        tooltip.innerHTML = '<strong>Línea ' + escapeHtml(p.codigo) + ' · ' + escapeHtml(p.estacion) + '</strong>' +
+          '<span class="mono">' + p.pct + '% ok (' + p.ok + '/' + p.total + ' accesos)</span>';
+        tooltip.style.left = (ev.clientX - boxRect.left + 14) + "px";
+        tooltip.style.top = (ev.clientY - boxRect.top + 10) + "px";
+        tooltip.hidden = false;
+      });
+      el.addEventListener("mouseleave", function () { tooltip.hidden = true; });
+      el.addEventListener("focus", function () {
+        var p = puntosPorKey[el.dataset.key];
+        tooltip.innerHTML = '<strong>Línea ' + escapeHtml(p.codigo) + ' · ' + escapeHtml(p.estacion) + '</strong>' +
+          '<span class="mono">' + p.pct + '% ok (' + p.ok + '/' + p.total + ' accesos)</span>';
+        tooltip.style.left = "0px"; tooltip.style.top = "0px"; tooltip.hidden = false;
+      });
+      el.addEventListener("blur", function () { tooltip.hidden = true; });
+    });
+
+    document.getElementById("legend-lineas").innerHTML = Object.keys(LINEA_COLOR_VAR).sort().map(function (codigo) {
+      return '<span class="legend-item"><span class="legend-ring" style="border-color:' + lineaColor(codigo) + '"></span>Línea ' + codigo + '</span>';
+    }).join("");
+  }
+
+  /* ---------------- boot ---------------- */
+
+  async function boot() {
+    try {
+      var rows = await supaGet("estado_actual_legible?select=*&order=linea.asc,estacion.asc,nombre.asc");
+      window.__estadoRows = rows;
+      renderSummary(rows);
+      renderProblemas(rows);
+      renderLineas(rows);
+      if (document.querySelector('.tab[data-tab="mapa"]').getAttribute("aria-selected") === "true") {
+        renderMapa(rows);
+      }
+    } catch (err) {
+      document.getElementById("problemas-container").innerHTML = '<div class="error-banner">No se pudo conectar con la base: ' + escapeHtml(err.message) + '</div>';
+      document.getElementById("lineas-container").innerHTML = "";
+      document.getElementById("brand-sub").textContent = "Error de conexión";
+    }
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
