@@ -358,7 +358,7 @@
   </main>
 
   <footer>
-    Fuente: API pública de accesibilidad de EMOVA · datos propios recolectados cada 5 min ·
+    Fuente: API pública de accesibilidad de EMOVA · datos propios recolectados cada 2 min ·
     <a href="https://github.com/juanfere/accesibilidad_subte" target="_blank" rel="noopener">código</a>
   </footer>
 </div>
@@ -775,7 +775,7 @@
 
   // Best-effort: fuerza a la Edge Function a consultar la API de EMOVA de
   // nuevo antes de leer estado_actual, para no depender solo de que
-  // pg_cron haya pasado en los últimos 5 min. Si falla o tarda de más
+  // pg_cron haya pasado en los últimos 2 min. Si falla o tarda de más
   // (cold start, EMOVA caída, etc.) seguimos igual con lo que ya hay en
   // Supabase: nunca debe bloquear el dashboard.
   async function forzarActualizacion() {

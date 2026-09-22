@@ -1,8 +1,13 @@
 name: Consultar accesibilidad subte
 
+# El schedule de cron cada 5' se sacó de acá: en runners compartidos de
+# GitHub Actions los eventos `schedule` pueden demorarse bien por encima
+# del intervalo pedido (o saltearse ejecuciones). Ahora la consulta
+# periódica la dispara pg_cron dentro de Supabase, invocando la Edge
+# Function `consultar` (ver supabase/functions/consultar y
+# supabase/sql/cron_consultar.sql). Este workflow queda solo para correrlo
+# a mano si hace falta debuggear con el script Python.
 on:
-  schedule:
-    - cron: "*/5 * * * *"
   workflow_dispatch: {}
 
 jobs:

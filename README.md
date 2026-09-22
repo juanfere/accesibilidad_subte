@@ -7,7 +7,7 @@ tener una compu prendida corriendo un loop.
 ## Modelo de datos
 
 En vez de guardar un snapshot completo en cada consulta (crecería muy rápido:
-~424 accesos x cada 5 min = pasaría los 500MB gratis de Supabase en días),
+~424 accesos x cada 2 min = pasaría los 500MB gratis de Supabase en días),
 se guarda:
 
 - `accesos`: dimensión con el catálogo de accesos físicos (línea, estación,
@@ -71,24 +71,57 @@ Debería imprimir algo como:
 python migrar_csv.py
 ```
 
-### 4. Mover esto a un repo propio en GitHub
+### 4. Programar la consulta periódica (Edge Function + pg_cron)
+
+La consulta cada 2 min **no** corre más como cron de GitHub Actions: en
+runners compartidos el evento `schedule` puede demorarse bien por encima
+del intervalo pedido, o directamente saltearse ejecuciones (le pasaba a
+este proyecto). En su lugar, la misma lógica de `descargar.py` vive como
+una Edge Function de Supabase (`supabase/functions/consultar`), programada
+con `pg_cron` desde **adentro** de la base — un scheduler real, sin cola de
+CI compartida de por medio. El workflow de GitHub (`.github/workflows/consultar.yml`)
+quedó solo para correr `descargar.py` a mano si hace falta debuggear.
+
+1. **Deployar la función.** Sin necesidad de la Supabase CLI: en el
+   dashboard, ir a **Edge Functions → Create a new function**, nombrarla
+   `consultar`, y pegar el contenido de `supabase/functions/consultar/index.ts`.
+   Deployar. No hace falta configurar ningún secret: `SUPABASE_URL` y
+   `SUPABASE_SERVICE_ROLE_KEY` ya están disponibles automáticamente dentro
+   de toda Edge Function del proyecto.
+2. **Probarla a mano** antes de programarla: en la misma pantalla de la
+   función hay un botón para invocarla (o `curl -X POST
+   https://xxxxxxxxxxxx.supabase.co/functions/v1/consultar -H "Authorization:
+   Bearer <anon key>" -H "apikey: <anon key>"`). Debería devolver algo como
+   `{"ok":true,"accesos":424,"cambios":...}`.
+3. **Programarla con pg_cron.** Ir a **SQL Editor → New query**, pegar el
+   contenido de `supabase/sql/cron_consultar.sql`, reemplazar los dos
+   placeholders (`SUPABASE_URL` y la `anon` key — los mismos valores que ya
+   están hardcodeados en `docs/index.html`) y ejecutar. Corre una sola vez;
+   a partir de ahí `pg_cron` invoca la función cada 2 minutos solo.
+4. **Verificar que quedó corriendo**: `select * from cron.job;` para ver el
+   job programado, o `select * from cron.job_run_details order by
+   start_time desc limit 20;` para ver las últimas ejecuciones.
+
+El dashboard (`docs/index.html`) además llama a esta misma función al
+cargar, para forzar un refresh apenas alguien entra a mirar (con timeout
+corto y sin bloquear si falla); la función tiene un debounce de 20s para no
+pegarle dos veces seguidas a la API de EMOVA si eso coincide con el paso de
+`pg_cron`.
+
+### 5. Mover esto a un repo propio en GitHub
 
 Este proyecto se armó dentro del repo `sandbox` (privado, mezclado con otras
-cosas) para no ensuciar minutos de Actions de un repo privado con un cron
-cada 5 min. Antes de activar el workflow:
+cosas). Antes de usarlo en serio:
 
-1. Crear un repo nuevo en GitHub, **público** (así los minutos de Actions
-   son gratis sin límite; los datos son públicos igual).
+1. Crear un repo nuevo en GitHub, público o privado (ya no depende de
+   minutos de Actions gratis, así que no es obligatorio que sea público).
 2. Copiar el contenido de esta carpeta (menos `accesibilidad_emova.csv` si
-   ya la migraste) a ese repo. Importante: `.github/workflows/consultar.yml`
-   tiene que quedar en la **raíz** del repo nuevo, GitHub Actions solo lee
-   workflows ahí.
-3. En el repo nuevo: **Settings → Secrets and variables → Actions → New
-   repository secret**, cargar `SUPABASE_URL` y `SUPABASE_KEY`.
-4. Push. El workflow corre cada 5 minutos automáticamente (`schedule` en
-   `consultar.yml`); también se puede disparar a mano desde la pestaña
-   **Actions → Consultar accesibilidad subte → Run workflow**
-   (`workflow_dispatch`).
+   ya la migraste) a ese repo.
+3. Si vas a usar el workflow manual de debug: **Settings → Secrets and
+   variables → Actions → New repository secret**, cargar `SUPABASE_URL` y
+   `SUPABASE_KEY`.
+4. Publicar `docs/` como GitHub Pages (**Settings → Pages → Source:
+   Deploy from a branch → /docs**) si querés servir el dashboard desde ahí.
 
 ## Consultar los datos
 
