@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <style>
   :root {
     color-scheme: light;
@@ -256,10 +257,16 @@
 
   /* ---------- mapa ---------- */
   .mapa-layout { display: grid; grid-template-columns: 1fr; gap: 16px; }
-  .mapa-svg-box { position: relative; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); padding: 10px; }
-  .estacion-point { cursor: pointer; }
-  .estacion-point circle.fill { transition: r 0.1s ease; }
-  .estacion-point:hover circle.fill { r: 9; }
+  .mapa-svg-box {
+    position: relative; border: 1px solid var(--border); border-radius: 12px;
+    background: var(--surface-2); overflow: hidden; height: 520px;
+  }
+  .mapa-svg-box .loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--surface); color: var(--ink); }
+  .leaflet-popup-content { font-family: "Archivo", system-ui, sans-serif; font-size: 0.82rem; }
+  .leaflet-popup-content strong { display: block; font-weight: 700; margin-bottom: 2px; }
+  .leaflet-popup-content .mono { font-family: "IBM Plex Mono", monospace; opacity: 0.85; }
+  .leaflet-container { background: var(--surface-2); font-family: "Archivo", system-ui, sans-serif; }
 
   .legend-row { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; }
   .legend-group { display: flex; flex-direction: column; gap: 6px; }
@@ -268,16 +275,6 @@
   .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.76rem; color: var(--ink-secondary); }
   .legend-swatch { width: 10px; height: 10px; border-radius: 50%; flex: none; }
   .legend-ring { width: 10px; height: 10px; border-radius: 50%; border: 2px solid; flex: none; background: transparent; }
-
-  #map-tooltip {
-    position: absolute; pointer-events: none; z-index: 5;
-    background: var(--ink); color: var(--bg);
-    font-size: 0.76rem; padding: 8px 10px; border-radius: 8px;
-    box-shadow: var(--shadow); max-width: 220px; line-height: 1.4;
-  }
-  :root[data-theme="dark"] #map-tooltip, @media (prefers-color-scheme: dark) { }
-  #map-tooltip strong { display: block; font-weight: 700; margin-bottom: 2px; }
-  #map-tooltip .mono { opacity: 0.85; }
 
   .loading, .error-banner { padding: 16px; text-align: center; color: var(--ink-muted); font-size: 0.85rem; }
   .error-banner { color: var(--critical); background: var(--critical-bg); border-radius: 10px; }
@@ -290,6 +287,7 @@
     .tile { flex: 1 1 auto; min-width: 0; }
     .problema-row, .evento-row { grid-template-columns: 1fr; }
     .problema-since, .evento-time { text-align: left; }
+    .mapa-svg-box { height: 380px; }
   }
 </style>
 </head>
@@ -365,18 +363,32 @@
   </footer>
 </div>
 
-<div id="map-tooltip" hidden></div>
-
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 (function () {
   "use strict";
 
   var SUPABASE_URL = "https://hcomeroufunfgntuioig.supabase.co";
   var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhjb21lcm91ZnVuZmdudHVpb2lnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwMjkyNzQsImV4cCI6MjEwNTYwNTI3NH0.TXrdSgDy8GT2HF8chWjwroh4i2L3CwAlcrkfETjHLoA";
+  var CONSULTAR_FN_URL = SUPABASE_URL + "/functions/v1/consultar";
 
   var LINEA_COLOR_VAR = { A: "--linea-a", B: "--linea-b", C: "--linea-c", D: "--linea-d", E: "--linea-e", H: "--linea-h" };
 
   var ESTACIONES_COORDS = {"A|Acoyte":{"lon":-58.43642989126413,"lat":-34.618279061088415,"nombre_oficial":"Acoyte"},"A|Carabobo":{"lon":-58.45671024455198,"lat":-34.626665595345294,"nombre_oficial":"Carabobo"},"A|Castro Barros":{"lon":-58.42181769657279,"lat":-34.61176939995314,"nombre_oficial":"Castro Barros"},"A|Congreso":{"lon":-58.392672097001295,"lat":-34.60922477063858,"nombre_oficial":"Congreso - Pdte. Dr. Raúl Alfonsín"},"A|Lima":{"lon":-58.382236114316925,"lat":-34.60909884479506,"nombre_oficial":"Lima"},"A|Loria":{"lon":-58.41518802065098,"lat":-34.610780851367856,"nombre_oficial":"Loria"},"A|Perú":{"lon":-58.3742717794385,"lat":-34.608558085581826,"nombre_oficial":"Peru"},"A|Piedras":{"lon":-58.37908900065684,"lat":-34.60888074907816,"nombre_oficial":"Piedras"},"A|Plaza Miserere":{"lon":-58.40670979270381,"lat":-34.60981638710716,"nombre_oficial":"Plaza De Miserere"},"A|Plaza de Mayo":{"lon":-58.370972689307145,"lat":-34.60880929908102,"nombre_oficial":"Plaza De Mayo"},"A|Primera Junta":{"lon":-58.44117877203333,"lat":-34.62040428161419,"nombre_oficial":"Primera Junta"},"A|Puan":{"lon":-58.44864846354647,"lat":-34.6235279870421,"nombre_oficial":"Puan"},"A|Saenz Peña":{"lon":-58.38678071351404,"lat":-34.60941163979187,"nombre_oficial":"Saenz Peña"},"A|San José de Flores":{"lon":-58.463540652225156,"lat":-34.629086207306415,"nombre_oficial":"San José De Flores"},"A|San Pedrito":{"lon":-58.469639501989754,"lat":-34.63070606055325,"nombre_oficial":"San Pedrito"},"B|Callao":{"lon":-58.39231755671001,"lat":-34.604418737076664,"nombre_oficial":"Callao - Maestro Alfredo Bravo"},"B|Carlos Gardel":{"lon":-58.41176510373516,"lat":-34.604078814375725,"nombre_oficial":"Carlos Gardel"},"B|Carlos Pellegrini":{"lon":-58.38071866341278,"lat":-34.60363626062853,"nombre_oficial":"C. Pellegrini"},"B|De Los Incas Parque Chas":{"lon":-58.47424086083075,"lat":-34.58124896974297,"nombre_oficial":"De Los Incas - Pque. Chas"},"B|Dorrego":{"lon":-58.44757417574107,"lat":-34.59171790789488,"nombre_oficial":"Dorrego"},"B|Echeverría":{"lon":-58.48101327779952,"lat":-34.57779761324633,"nombre_oficial":"Echeverría - Mártires Palotinos"},"B|Federico Lacroze":{"lon":-58.455030087707556,"lat":-34.58719774686522,"nombre_oficial":"Federico Lacroze"},"B|Florida":{"lon":-58.37507557490589,"lat":-34.60329642125253,"nombre_oficial":"Florida"},"B|Juan Manuel de Rosas Villa Urquiza":{"lon":-58.486384920729684,"lat":-34.574319255623145,"nombre_oficial":"Juan Manuel De Rosas - Villa Urquiza"},"B|Leandro N. Alem":{"lon":-58.36993412575747,"lat":-34.60298861426501,"nombre_oficial":"Leandro N. Alem"},"B|Malabia O. Pugliese":{"lon":-58.439772858444194,"lat":-34.59896691493091,"nombre_oficial":"Malabia - Osvaldo Pugliese"},"B|Medrano Almagro":{"lon":-58.42096459307871,"lat":-34.60316426400566,"nombre_oficial":"Almagro - Medrano"},"B|Pasteur AMIA":{"lon":-58.39947727482585,"lat":-34.60464219201641,"nombre_oficial":"Pasteur - Amia"},"B|Pueyrredón":{"lon":-58.405402208624345,"lat":-34.6045803098221,"nombre_oficial":"Pueyrredon"},"B|Tronador Villa Ortúzar":{"lon":-58.46622755654512,"lat":-34.58409463968795,"nombre_oficial":"Tronador - Villa Ortúzar"},"B|Uruguay":{"lon":-58.38729966906588,"lat":-34.604092730256646,"nombre_oficial":"Uruguay"},"B|Ángel Gallardo":{"lon":-58.431275555639985,"lat":-34.60216166561987,"nombre_oficial":"Angel Gallardo"},"C|Avenida de Mayo":{"lon":-58.38061450046986,"lat":-34.60898234787075,"nombre_oficial":"Av. De Mayo"},"C|Constitución":{"lon":-58.38143804863668,"lat":-34.627618063975376,"nombre_oficial":"Constitucion"},"C|Diagonal Norte":{"lon":-58.37953383769559,"lat":-34.60484286205875,"nombre_oficial":"Diagonal Norte"},"C|Gral. San Martín":{"lon":-58.37782305054521,"lat":-34.59505674176369,"nombre_oficial":"San Martin"},"C|Independencia":{"lon":-58.38017734615888,"lat":-34.618124421551606,"nombre_oficial":"Independencia"},"C|Lavalle":{"lon":-58.378159720315566,"lat":-34.60176910856247,"nombre_oficial":"Lavalle"},"C|Mariano Moreno":{"lon":-58.380448233244984,"lat":-34.612616229073836,"nombre_oficial":"Moreno"},"C|Retiro":{"lon":-58.37402240381632,"lat":-34.59119321488052,"nombre_oficial":"Retiro"},"C|San Juan":{"lon":-58.379924898124486,"lat":-34.62191546671289,"nombre_oficial":"San Juan"},"D|9 de Julio":{"lon":-58.38057816074685,"lat":-34.60424434385433,"nombre_oficial":"9 De Julio"},"D|Agüero":{"lon":-58.407164107307096,"lat":-34.59162740214711,"nombre_oficial":"Agüero"},"D|Bulnes":{"lon":-58.41129653856202,"lat":-34.58823676433706,"nombre_oficial":"Bulnes"},"D|Callao":{"lon":-58.3931285025438,"lat":-34.59963885960583,"nombre_oficial":"Callao"},"D|Catedral":{"lon":-58.373959878509574,"lat":-34.6078013639001,"nombre_oficial":"Catedral"},"D|Congreso Tucumán":{"lon":-58.462379126412664,"lat":-34.555642414974905,"nombre_oficial":"Congreso De Tucuman"},"D|Facultad de Medicina":{"lon":-58.39792687400386,"lat":-34.59975640870826,"nombre_oficial":"Facultad De Medicina"},"D|José Hernández":{"lon":-58.452126677649765,"lat":-34.56621559971072,"nombre_oficial":"Jose Hernandez"},"D|Juramento":{"lon":-58.45649005303586,"lat":-34.56230955488594,"nombre_oficial":"Juramento"},"D|Ministro Carranza":{"lon":-58.435015264738354,"lat":-34.57517843366268,"nombre_oficial":"Ministro Carranza - Miguel Abuelo"},"D|Olleros":{"lon":-58.444669509559354,"lat":-34.57001254234762,"nombre_oficial":"Olleros"},"D|Palermo":{"lon":-58.42571354086816,"lat":-34.578421972901005,"nombre_oficial":"Palermo"},"D|Plaza Italia":{"lon":-58.421198278781375,"lat":-34.5814110535123,"nombre_oficial":"Plaza Italia"},"D|Pueyrredón":{"lon":-58.40239831055495,"lat":-34.59442518997953,"nombre_oficial":"Pueyrredon"},"D|Tribunales – Teatro Colón":{"lon":-58.38514600302589,"lat":-34.601586388942174,"nombre_oficial":"Tribunales - Teatro Colón"},"E|Av. La Plata":{"lon":-58.426790729105825,"lat":-34.627014314357936,"nombre_oficial":"Av. La Plata"},"E|Belgrano":{"lon":-58.37758476922805,"lat":-34.61284803582894,"nombre_oficial":"Belgrano"},"E|Boedo":{"lon":-58.415535011684995,"lat":-34.62536493574887,"nombre_oficial":"Boedo"},"E|Bolívar":{"lon":-58.37368829690775,"lat":-34.60924142215441,"nombre_oficial":"Bolivar"},"E|Catalinas":{"lon":-58.37166923805774,"lat":-34.596623004422035,"nombre_oficial":"Catalinas"},"E|Correo Central":{"lon":-58.37056106331843,"lat":-34.60311060328679,"nombre_oficial":"Correo Central"},"E|Emilio Mitre":{"lon":-58.44217173462012,"lat":-34.63104067307458,"nombre_oficial":"Emilio Mitre"},"E|Entre Ríos":{"lon":-58.39151492466532,"lat":-34.62271843890065,"nombre_oficial":"Entre Rios - Rodolfo Walsh"},"E|Gral. Urquiza":{"lon":-58.4093932402834,"lat":-34.62465260251508,"nombre_oficial":"Urquiza"},"E|Independencia":{"lon":-58.381538621328296,"lat":-34.617936227173786,"nombre_oficial":"Independencia - Beata Mama Antula"},"E|Jujuy":{"lon":-58.40293931492661,"lat":-34.62386451404442,"nombre_oficial":"Jujuy"},"E|Medalla Milagrosa":{"lon":-58.45027890468544,"lat":-34.63638793805377,"nombre_oficial":"Medalla Milagrosa"},"E|Moreno":{"lon":-58.43381765291902,"lat":-34.62801640771465,"nombre_oficial":"Jose Maria Moreno"},"E|Pichincha":{"lon":-58.39707106223341,"lat":-34.62310865679827,"nombre_oficial":"Pichincha"},"E|Retiro":{"lon":-58.37572458013492,"lat":-34.59217655867434,"nombre_oficial":"Retiro"},"E|San José":{"lon":-58.38515204539739,"lat":-34.622338242309205,"nombre_oficial":"San Jose"},"E|Varela":{"lon":-58.45789205604037,"lat":-34.64013605282059,"nombre_oficial":"Varela"},"H|Caseros":{"lon":-58.398930404056664,"lat":-34.63574869190404,"nombre_oficial":"Caseros"},"H|Corrientes":{"lon":-58.40545309576947,"lat":-34.60448945839987,"nombre_oficial":"Corrientes"},"H|Córdoba":{"lon":-58.40372437975688,"lat":-34.59845449773643,"nombre_oficial":"Córdoba"},"H|Facultad de Derecho":{"lon":-58.39102235543635,"lat":-34.58303601541506,"nombre_oficial":"Facultad De Derecho - Julieta Lanteri"},"H|Hospitales":{"lon":-58.41238736270171,"lat":-34.64126739478943,"nombre_oficial":"Hospitales - Ringo Bonavena"},"H|Humberto 1°":{"lon":-58.40232549651671,"lat":-34.62309113761142,"nombre_oficial":"Humberto 1°"},"H|Inclán Mezquita Al Ahmad":{"lon":-58.400972334211815,"lat":-34.629374324650314,"nombre_oficial":"Inclan - Mezquita Al Ahmad"},"H|Las Heras":{"lon":-58.397218811204326,"lat":-34.58746115122622,"nombre_oficial":"Las Heras"},"H|Once – 30 de Diciembre":{"lon":-58.40603909181976,"lat":-34.60893439989664,"nombre_oficial":"Once - 30 De Diciembre"},"H|Parque Patricios":{"lon":-58.405797335978185,"lat":-34.63840447279842,"nombre_oficial":"Parque Patricios"},"H|Santa Fe - Carlos Jáuregui":{"lon":-58.40232564194708,"lat":-34.59438501065232,"nombre_oficial":"Santa Fe - Carlos Jauregui"},"H|Venezuela":{"lon":-58.404734437166375,"lat":-34.61524116028971,"nombre_oficial":"Venezuela"}};
+
+  // Orden geográfico real de las estaciones de cada línea (de punta a
+  // punta), filtrado a las que tienen accesos relevados (y por lo tanto
+  // coordenadas en ESTACIONES_COORDS). Fuente: Wikipedia (Línea A/B/C/D/E/H
+  // del subte de Buenos Aires), verificado estación por estación contra
+  // ESTACIONES_COORDS. Se usa solo para dibujar el trazado en el mapa.
+  var LINEA_ORDEN = {
+    A: ["Plaza de Mayo", "Perú", "Piedras", "Lima", "Saenz Peña", "Congreso", "Plaza Miserere", "Loria", "Castro Barros", "Acoyte", "Primera Junta", "Puan", "Carabobo", "San José de Flores", "San Pedrito"],
+    B: ["Leandro N. Alem", "Florida", "Carlos Pellegrini", "Uruguay", "Callao", "Pasteur AMIA", "Pueyrredón", "Carlos Gardel", "Medrano Almagro", "Ángel Gallardo", "Malabia O. Pugliese", "Dorrego", "Federico Lacroze", "Tronador Villa Ortúzar", "De Los Incas Parque Chas", "Echeverría", "Juan Manuel de Rosas Villa Urquiza"],
+    C: ["Retiro", "Gral. San Martín", "Lavalle", "Diagonal Norte", "Avenida de Mayo", "Mariano Moreno", "Independencia", "San Juan", "Constitución"],
+    D: ["Catedral", "9 de Julio", "Tribunales – Teatro Colón", "Callao", "Facultad de Medicina", "Pueyrredón", "Agüero", "Bulnes", "Plaza Italia", "Palermo", "Ministro Carranza", "Olleros", "José Hernández", "Juramento", "Congreso Tucumán"],
+    E: ["Retiro", "Catalinas", "Correo Central", "Bolívar", "Belgrano", "Independencia", "San José", "Entre Ríos", "Pichincha", "Jujuy", "Gral. Urquiza", "Boedo", "Av. La Plata", "Moreno", "Emilio Mitre", "Medalla Milagrosa", "Varela"],
+    H: ["Facultad de Derecho", "Las Heras", "Santa Fe - Carlos Jáuregui", "Córdoba", "Corrientes", "Once – 30 de Diciembre", "Venezuela", "Humberto 1°", "Inclán Mezquita Al Ahmad", "Caseros", "Parque Patricios", "Hospitales"]
+  };
 
   function lineaColor(codigo) {
     var v = LINEA_COLOR_VAR[codigo];
@@ -658,9 +670,50 @@
 
   /* ---------------- mapa ---------------- */
 
-  function renderMapa(rows) {
-    var box = document.getElementById("mapa-svg-box");
+  var leafletMap = null;
+  var leafletMarkers = null;
 
+  function cssVarValue(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function statusColor(bucket) {
+    var map = { good: "--good", warning: "--warning", critical: "--critical" };
+    return cssVarValue(map[bucket]);
+  }
+
+  function initLeafletMap(puntos) {
+    document.getElementById("mapa-svg-box").innerHTML = "";
+    leafletMap = L.map("mapa-svg-box", { scrollWheelZoom: false });
+
+    // Tiles estándar de OpenStreetMap: sin API key ni cuenta, uso libre
+    // dentro de su política de fair-use (tráfico bajo + atribución, que es
+    // justo nuestro caso). No tienen variante oscura, así que el mapa se ve
+    // siempre en estilo claro aunque el dashboard esté en modo oscuro.
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19
+    }).addTo(leafletMap);
+
+    Object.keys(LINEA_ORDEN).forEach(function (codigo) {
+      var latlngs = LINEA_ORDEN[codigo].map(function (estacion) {
+        var coords = ESTACIONES_COORDS[codigo + "|" + estacion];
+        return coords ? [coords.lat, coords.lon] : null;
+      }).filter(Boolean);
+      if (latlngs.length > 1) {
+        L.polyline(latlngs, { color: lineaColor(codigo), weight: 4, opacity: 0.6 }).addTo(leafletMap);
+      }
+    });
+
+    leafletMarkers = L.layerGroup().addTo(leafletMap);
+
+    var bounds = L.latLngBounds(puntos.map(function (p) { return [p.lat, p.lon]; }));
+    leafletMap.fitBounds(bounds, { padding: [24, 24] });
+
+    setTimeout(function () { leafletMap.invalidateSize(); }, 100);
+  }
+
+  function renderMapa(rows) {
     var porEstacion = {};
     rows.forEach(function (r) {
       var codigo = lineaCode(r.linea);
@@ -683,61 +736,34 @@
     }).filter(Boolean);
 
     if (puntos.length === 0) {
-      box.innerHTML = '<div class="empty-state">No se pudieron ubicar estaciones en el mapa.</div>';
+      if (!leafletMap) {
+        document.getElementById("mapa-svg-box").innerHTML = '<div class="empty-state">No se pudieron ubicar estaciones en el mapa.</div>';
+      }
       return;
     }
 
-    var lats = puntos.map(function (p) { return p.lat; });
-    var lons = puntos.map(function (p) { return p.lon; });
-    var latMin = Math.min.apply(null, lats), latMax = Math.max.apply(null, lats);
-    var lonMin = Math.min.apply(null, lons), lonMax = Math.max.apply(null, lons);
-    var latMid = ((latMin + latMax) / 2) * Math.PI / 180;
-    var cosLat = Math.cos(latMid);
-    var xSpan = (lonMax - lonMin) * cosLat;
-    var ySpan = latMax - latMin;
+    if (!leafletMap) {
+      initLeafletMap(puntos);
+    } else {
+      leafletMap.invalidateSize();
+      leafletMarkers.clearLayers();
+    }
 
-    var W = 640, pad = 34;
-    var H = pad * 2 + (W - pad * 2) * (ySpan / xSpan);
-
-    function px(lon) { return pad + ((lon - lonMin) * cosLat / xSpan) * (W - pad * 2); }
-    function py(lat) { return pad + ((latMax - lat) / ySpan) * (H - pad * 2); }
-
-    var statusVar = { good: "var(--good)", warning: "var(--warning)", critical: "var(--critical)" };
-
-    var circles = puntos.map(function (p) {
+    puntos.forEach(function (p) {
       var bucket = statusBucket(p.pct);
-      var cx = px(p.lon).toFixed(1), cy = py(p.lat).toFixed(1);
-      var stroke = lineaColor(p.codigo);
-      return '<g class="estacion-point" data-key="' + p.key + '" tabindex="0">' +
-        '<circle cx="' + cx + '" cy="' + cy + '" r="9" fill="transparent"></circle>' +
-        '<circle class="fill" cx="' + cx + '" cy="' + cy + '" r="6.5" fill="' + statusVar[bucket] + '" stroke="' + stroke + '" stroke-width="2"></circle>' +
-      '</g>';
-    }).join("");
-
-    box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H.toFixed(1) + '" role="img" aria-label="Mapa de estaciones del subte con porcentaje de accesos funcionando" style="width:100%;height:auto;display:block">' + circles + '</svg>';
-
-    var tooltip = document.getElementById("map-tooltip");
-    var puntosPorKey = {};
-    puntos.forEach(function (p) { puntosPorKey[p.key] = p; });
-
-    box.querySelectorAll(".estacion-point").forEach(function (el) {
-      el.addEventListener("mousemove", function (ev) {
-        var p = puntosPorKey[el.dataset.key];
-        var boxRect = box.getBoundingClientRect();
-        tooltip.innerHTML = '<strong>Línea ' + escapeHtml(p.codigo) + ' · ' + escapeHtml(p.estacion) + '</strong>' +
-          '<span class="mono">' + p.pct + '% ok (' + p.ok + '/' + p.total + ' accesos)</span>';
-        tooltip.style.left = (ev.clientX - boxRect.left + 14) + "px";
-        tooltip.style.top = (ev.clientY - boxRect.top + 10) + "px";
-        tooltip.hidden = false;
-      });
-      el.addEventListener("mouseleave", function () { tooltip.hidden = true; });
-      el.addEventListener("focus", function () {
-        var p = puntosPorKey[el.dataset.key];
-        tooltip.innerHTML = '<strong>Línea ' + escapeHtml(p.codigo) + ' · ' + escapeHtml(p.estacion) + '</strong>' +
-          '<span class="mono">' + p.pct + '% ok (' + p.ok + '/' + p.total + ' accesos)</span>';
-        tooltip.style.left = "0px"; tooltip.style.top = "0px"; tooltip.hidden = false;
-      });
-      el.addEventListener("blur", function () { tooltip.hidden = true; });
+      L.circleMarker([p.lat, p.lon], {
+        radius: 7,
+        weight: 2,
+        color: lineaColor(p.codigo),
+        fillColor: statusColor(bucket),
+        fillOpacity: 1
+      })
+        .bindTooltip(
+          '<strong>Línea ' + escapeHtml(p.codigo) + ' · ' + escapeHtml(p.estacion) + '</strong>' +
+          '<span class="mono">' + p.pct + '% ok (' + p.ok + '/' + p.total + ' accesos)</span>',
+          { direction: "top", offset: [0, -6] }
+        )
+        .addTo(leafletMarkers);
     });
 
     document.getElementById("legend-lineas").innerHTML = Object.keys(LINEA_COLOR_VAR).sort().map(function (codigo) {
@@ -747,8 +773,33 @@
 
   /* ---------------- boot ---------------- */
 
+  // Best-effort: fuerza a la Edge Function a consultar la API de EMOVA de
+  // nuevo antes de leer estado_actual, para no depender solo de que
+  // pg_cron haya pasado en los últimos 5 min. Si falla o tarda de más
+  // (cold start, EMOVA caída, etc.) seguimos igual con lo que ya hay en
+  // Supabase: nunca debe bloquear el dashboard.
+  async function forzarActualizacion() {
+    var controller = new AbortController();
+    var timeout = setTimeout(function () { controller.abort(); }, 6000);
+    try {
+      await fetch(CONSULTAR_FN_URL, {
+        method: "POST",
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: "Bearer " + SUPABASE_ANON_KEY
+        },
+        signal: controller.signal
+      });
+    } catch (err) {
+      /* ignorado a propósito, ver comentario arriba */
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
   async function boot() {
     try {
+      await forzarActualizacion();
       var rows = await supaGet("estado_actual_legible?select=*&order=linea.asc,estacion.asc,nombre.asc");
       window.__estadoRows = rows;
       renderSummary(rows);
