@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cómo funciona</title>
+<meta name="description" content="Cómo se recolectan, guardan y muestran los datos de accesibilidad del subte de Buenos Aires, explicado sin tecnicismos." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #eef1f3;
+    --surface: #ffffff;
+    --surface-2: #f4f6f7;
+    --ink: #121a21;
+    --ink-secondary: #56636c;
+    --ink-muted: #8a959c;
+    --border: #d7dee3;
+    --accent: #0e7c86;
+    --accent-bg: #e2f1f2;
+    --good: #1c8a5e;
+    --good-bg: #e5f4ed;
+    --warning: #a9700f;
+    --warning-bg: #fbf0dd;
+    --critical: #b3352f;
+    --critical-bg: #fbe7e5;
+    --linea-a: #009499;
+    --linea-b: #d2261e;
+    --linea-c: #045ca7;
+    --linea-d: #158a4c;
+    --linea-e: #7a2d8c;
+    --linea-h: #b8860a;
+    --shadow: 0 1px 2px rgba(18, 26, 33, 0.06), 0 4px 14px rgba(18, 26, 33, 0.06);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0a1116;
+      --surface: #121a21;
+      --surface-2: #182028;
+      --ink: #e8edf0;
+      --ink-secondary: #a7b2b9;
+      --ink-muted: #6e7a81;
+      --border: #263139;
+      --accent: #3bc7d1;
+      --accent-bg: #113338;
+      --good: #33c289;
+      --good-bg: #10301f;
+      --warning: #e8ac3b;
+      --warning-bg: #35280f;
+      --critical: #e2695f;
+      --critical-bg: #391712;
+      --linea-a: #29a39f;
+      --linea-b: #e73023;
+      --linea-c: #2d7dd2;
+      --linea-d: #20975a;
+      --linea-e: #9f47c2;
+      --linea-h: #a37c0c;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 18px rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0a1116;
+    --surface: #121a21;
+    --surface-2: #182028;
+    --ink: #e8edf0;
+    --ink-secondary: #a7b2b9;
+    --ink-muted: #6e7a81;
+    --border: #263139;
+    --accent: #3bc7d1;
+    --accent-bg: #113338;
+    --good: #33c289;
+    --good-bg: #10301f;
+    --warning: #e8ac3b;
+    --warning-bg: #35280f;
+    --critical: #e2695f;
+    --critical-bg: #391712;
+    --linea-a: #29a39f;
+    --linea-b: #e73023;
+    --linea-c: #2d7dd2;
+    --linea-d: #20975a;
+    --linea-e: #9f47c2;
+    --linea-h: #a37c0c;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 18px rgba(0, 0, 0, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.6;
+    padding-inline: 16px;
+    padding-block: max(20px, env(safe-area-inset-top, 0px)) max(28px, env(safe-area-inset-bottom, 0px));
+  }
+
+  .wrap { max-width: 860px; margin: 0 auto; }
+
+  /* ---------- header ---------- */
+  .hero {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 28px 26px 24px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    position: relative;
+  }
+  .lineas-stripe { display: flex; height: 6px; position: absolute; top: 0; left: 0; right: 0; }
+  .lineas-stripe span { flex: 1; }
+  .eyebrow { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+  h1 { font-size: clamp(1.6rem, 4.5vw, 2.3rem); font-weight: 800; line-height: 1.15; margin: 6px 0 12px; letter-spacing: -0.01em; }
+  .lead { font-size: 1.08rem; color: var(--ink-secondary); margin: 0; max-width: 62ch; }
+
+  /* ---------- toc ---------- */
+  .toc { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
+  .toc a {
+    font-size: 0.8rem; font-weight: 600; text-decoration: none; color: var(--ink-secondary);
+    border: 1px solid var(--border); background: var(--surface-2);
+    padding: 4px 10px; border-radius: 999px;
+  }
+  .toc a:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* ---------- cards ---------- */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 22px 26px;
+    margin-bottom: 16px;
+  }
+  h2 { font-size: 1.3rem; font-weight: 800; margin: 0 0 10px; display: flex; align-items: baseline; gap: 10px; }
+  h2 .num { font-family: "IBM Plex Mono", monospace; font-size: 0.85rem; font-weight: 600; color: var(--accent); }
+  h3 { font-size: 1.02rem; font-weight: 700; margin: 18px 0 4px; }
+  p { margin: 0 0 10px; }
+  .muted { color: var(--ink-secondary); }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  ul { padding-left: 20px; margin: 0 0 10px; }
+  li { margin-bottom: 4px; }
+
+  .callout {
+    background: var(--accent-bg);
+    border-left: 4px solid var(--accent);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 14px 0 4px;
+  }
+  .callout p:last-child { margin: 0; }
+
+  /* ---------- pieces grid ---------- */
+  .pieces { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 14px; }
+  .piece {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .piece .icon { font-size: 1.5rem; line-height: 1; }
+  .piece .name { font-weight: 700; margin-top: 8px; }
+  .piece .what { font-size: 0.88rem; color: var(--ink-secondary); margin-top: 2px; }
+  .piece .svc { font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; color: var(--ink-muted); margin-top: 8px; }
+  .badge {
+    display: inline-block; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--good); background: var(--good-bg); border-radius: 999px; padding: 2px 8px; margin-top: 8px;
+  }
+
+  /* ---------- flujo (idea en una imagen) ---------- */
+  .flujo { list-style: none; padding: 0; margin: 14px 0; display: flex; gap: 26px; }
+  .flujo li {
+    flex: 1; position: relative; margin: 0;
+    background: var(--surface-2); border: 1px solid var(--border); border-top: 3px solid var(--accent);
+    border-radius: 10px; padding: 12px 10px; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .flujo li + li::before {
+    content: "→"; position: absolute; left: -21px; top: 50%; transform: translateY(-50%);
+    color: var(--accent); font-weight: 700; font-size: 1.1rem;
+  }
+  .flujo .icon { font-size: 1.6rem; line-height: 1.2; }
+  .flujo .name { font-weight: 700; font-size: 0.92rem; }
+  .flujo .what { font-size: 0.78rem; color: var(--ink-secondary); line-height: 1.35; }
+  @media (max-width: 640px) {
+    .flujo { flex-direction: column; gap: 22px; }
+    .flujo li + li::before { content: "↓"; left: 50%; top: -20px; transform: translateX(-50%); }
+  }
+
+  /* ---------- diagrams ---------- */
+  .diagram {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 10px;
+    margin: 14px 0;
+    overflow-x: auto;
+    text-align: center;
+  }
+  .diagram .mermaid { visibility: hidden; }
+  .diagram .mermaid[data-processed="true"] { visibility: visible; }
+  .diagram svg { max-width: 100%; height: auto; }
+  .diagram-caption { font-size: 0.8rem; color: var(--ink-muted); text-align: center; margin-top: -6px; }
+
+  /* ---------- tables ---------- */
+  table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-secondary); }
+  td:first-child { font-weight: 700; white-space: nowrap; }
+
+  /* ---------- tables of data model ---------- */
+  .tablas { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 12px; }
+  .tabla { border-radius: 10px; padding: 14px; border: 1px solid var(--border); background: var(--surface-2); }
+  .tabla .tag { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; border-radius: 999px; padding: 2px 8px; }
+  .tag.fijo { color: var(--accent); background: var(--accent-bg); }
+  .tag.crece { color: var(--warning); background: var(--warning-bg); }
+  .tabla .name { font-weight: 700; margin-top: 8px; }
+  .tabla .what { font-size: 0.88rem; color: var(--ink-secondary); }
+
+  /* ---------- status chips ---------- */
+  .chip { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+  .chip::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
+  .chip.good { color: var(--good); }
+  .chip.warning { color: var(--warning); }
+  .chip.critical { color: var(--critical); }
+
+  /* ---------- faq ---------- */
+  details { border-bottom: 1px solid var(--border); padding: 10px 0; }
+  details:last-child { border-bottom: 0; }
+  summary { cursor: pointer; font-weight: 700; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; font-family: "IBM Plex Mono", monospace; color: var(--accent); font-weight: 600; }
+  details[open] summary::after { content: "−"; }
+  details p { margin: 8px 0 0; color: var(--ink-secondary); }
+
+  dl.glosario { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; }
+  dl.glosario dt { font-weight: 700; }
+  dl.glosario dd { margin: 0; color: var(--ink-secondary); }
+
+  footer { text-align: center; font-size: 0.8rem; color: var(--ink-muted); padding: 8px 0 0; }
+
+  @media (max-width: 560px) {
+    .hero, .card { padding: 18px 16px; }
+    dl.glosario { grid-template-columns: 1fr; gap: 2px; }
+    dl.glosario dd { margin-bottom: 8px; }
+    td:first-child { white-space: normal; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="lineas-stripe" aria-hidden="true">
+      <span style="background:var(--linea-a)"></span><span style="background:var(--linea-b)"></span><span style="background:var(--linea-c)"></span><span style="background:var(--linea-d)"></span><span style="background:var(--linea-e)"></span><span style="background:var(--linea-h)"></span>
+    </div>
+    <div class="eyebrow">Accesibilidad del subte</div>
+    <h1>Cómo funciona, explicado sin tecnicismos</h1>
+    <p class="lead">Qué hace el proyecto, de dónde salen los datos, dónde se guardan y cómo llegan a la página que ve la gente.</p>
+    <nav class="toc" aria-label="Contenido">
+      <a href="#problema">El problema</a>
+      <a href="#idea">La idea</a>
+      <a href="#servicios">Servicios</a>
+      <a href="#ciclo">Cada 2 minutos</a>
+      <a href="#cambios">Solo los cambios</a>
+      <a href="#datos">Los datos</a>
+      <a href="#web">La página</a>
+      <a href="#panorama">Panorama</a>
+      <a href="#faq">Preguntas</a>
+    </nav>
+  </header>
+
+  <section class="card" id="problema">
+    <h2><span class="num">01</span>¿Qué problema resuelve?</h2>
+    <p>Para una persona en silla de ruedas, con movilidad reducida, con un cochecito o con valijas, que un <strong>ascensor o una escalera mecánica</strong> del subte funcione o no cambia por completo el viaje.</p>
+    <p>EMOVA, la empresa que opera el subte de Buenos Aires, publica en internet el estado de esos equipos <strong>en ese momento</strong>, pero:</p>
+    <ul>
+      <li><strong>no guarda memoria:</strong> no se puede saber cuántas veces se rompió un ascensor el mes pasado ni cuánto tiempo estuvo fuera de servicio;</li>
+      <li><strong>no es fácil de mirar:</strong> son datos pensados para computadoras, no para personas.</li>
+    </ul>
+    <div class="callout">
+      <p>Este proyecto <strong>consulta esa información cada 2 minutos, la guarda y arma un historial</strong>, y la muestra en una página web con listados, gráficos y un mapa.</p>
+    </div>
+  </section>
+
+  <section class="card" id="idea">
+    <h2><span class="num">02</span>La idea en una imagen</h2>
+    <ol class="flujo">
+      <li><span class="icon">🚇</span><span class="name">EMOVA</span><span class="what">publica el estado de ascensores y escaleras</span></li>
+      <li><span class="icon">🤖</span><span class="name">Robot</span><span class="what">pregunta cada 2 minutos y anota lo que cambió</span></li>
+      <li><span class="icon">🗄️</span><span class="name">Base de datos</span><span class="what">guarda el estado actual y todos los cambios</span></li>
+      <li><span class="icon">🌐</span><span class="name">Página web</span><span class="what">muestra listados, gráficos y mapa</span></li>
+      <li><span class="icon">👥</span><span class="name">Personas</span><span class="what">consultan desde el celular o la compu</span></li>
+    </ol>
+    <p>Son cuatro piezas, y <strong>todas funcionan con servicios gratuitos</strong>. No hace falta que haya ninguna computadora personal prendida.</p>
+    <div class="pieces">
+      <div class="piece">
+        <div class="icon">🚇</div>
+        <div class="name">Fuente de datos</div>
+        <div class="what">La “ventanilla” pública donde EMOVA informa cómo está cada equipo.</div>
+        <div class="svc">API pública de EMOVA</div>
+        <span class="badge">Gratis</span>
+      </div>
+      <div class="piece">
+        <div class="icon">🤖</div>
+        <div class="name">Robot recolector</div>
+        <div class="what">Un programa que se despierta solo cada 2 minutos, pregunta y anota.</div>
+        <div class="svc">Supabase</div>
+        <span class="badge">Gratis</span>
+      </div>
+      <div class="piece">
+        <div class="icon">🗄️</div>
+        <div class="name">Base de datos</div>
+        <div class="what">La “libreta” donde queda todo guardado y ordenado.</div>
+        <div class="svc">Supabase</div>
+        <span class="badge">Plan gratuito</span>
+      </div>
+      <div class="piece">
+        <div class="icon">🌐</div>
+        <div class="name">Página web</div>
+        <div class="what">El tablero que ve la gente, con el mapa de la ciudad de fondo.</div>
+        <div class="svc">GitHub Pages + OpenStreetMap</div>
+        <span class="badge">Gratis</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="servicios">
+    <h2><span class="num">03</span>Los servicios, uno por uno</h2>
+
+    <h3>🚇 EMOVA, la fuente</h3>
+    <p>EMOVA tiene una dirección web pública que responde con la lista completa de <strong>líneas → estaciones → equipos</strong> y dice, para cada uno, si <strong>funciona o no</strong>. Hoy son <strong>unos 424 equipos</strong> en las líneas A, B, C, D, E y H. No hace falta usuario ni contraseña: es información pública.</p>
+
+    <h3>🤖 El robot con despertador, dentro de Supabase</h3>
+    <p>El robot vive en el mismo servicio donde se guardan los datos, Supabase, y tiene dos partes: un <strong>despertador</strong>, una tarea programada que suena <strong>cada 2 minutos</strong>, y una <strong>función</strong>, un pequeño programa que en ese momento le pregunta a EMOVA cómo están los equipos y anota lo que cambió. Como todo pasa dentro de Supabase, no hace falta ninguna otra computadora ni servicio.</p>
+    <p class="muted">Además, la página web también “despierta” a la función cada vez que alguien entra, para mostrar datos lo más frescos posible.</p>
+
+    <h3>🗄️ Supabase, la libreta</h3>
+    <p>Un servicio de <strong>base de datos en la nube</strong>, donde además corre el robot. Su plan gratuito (hasta 500&nbsp;MB) alcanza, y permite que cualquiera <strong>lea</strong> los datos desde internet mientras que solo el robot, con una llave secreta, puede <strong>escribir</strong>. Así nadie puede alterar la información.</p>
+
+    <h3>🌐 GitHub Pages + OpenStreetMap, la vidriera</h3>
+    <p>GitHub es el sitio donde vive el código del proyecto, y además publica gratis la página web, que es un único archivo. Cuando alguien la abre, pide los datos directamente a Supabase y los dibuja. El mapa de fondo viene de <strong>OpenStreetMap</strong>, un mapa mundial libre y colaborativo.</p>
+  </section>
+
+  <section class="card" id="ciclo">
+    <h2><span class="num">04</span>¿Qué pasa cada 2 minutos?</h2>
+    <div class="diagram"><pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant R as 🤖 Robot (Supabase)
+    participant E as 🚇 EMOVA
+    participant S as 🗄️ Base de datos
+    Note over R: Suena el despertador (cada 2 min)
+    R->>E: ¿Cómo están todos los equipos?
+    E-->>R: Lista completa (~424 equipos)
+    R->>S: ¿Cómo estaban la última vez?
+    S-->>R: Estado anterior de cada equipo
+    Note over R: Compara uno por uno
+    R->>S: Actualizá el estado actual de todos
+    alt Hubo cambios
+        R->>S: Anotá en el historial solo los que cambiaron
+    else No cambió nada
+        Note over R,S: No se agrega nada al historial
+    end
+    Note over R: Se apaga hasta la próxima
+    </pre></div>
+    <p class="diagram-caption">Todo el ciclo tarda unos pocos segundos.</p>
+  </section>
+
+  <section class="card" id="cambios">
+    <h2><span class="num">05</span>La idea clave: anotar solo los cambios</h2>
+    <p>Guardar una “foto” completa de los 424 equipos cada 2 minutos serían más de <strong>300.000 anotaciones por día</strong>, casi todas repetidas (“sigue funcionando”, “sigue funcionando”…). El espacio gratuito se llenaría en pocos días.</p>
+    <p>En cambio, el proyecto hace lo que haría una persona prolija con una libreta: <strong>solo escribe cuando algo cambia</strong>.</p>
+    <div class="diagram"><pre class="mermaid">
+flowchart TD
+    Q["El robot consulta un equipo<br/>(ej: ascensor de Estación Callao)"]
+    P{"¿Está igual que<br/>la vez anterior?"}
+    N["No se anota nada nuevo<br/>(solo la hora de la consulta)"]
+    Y["Se anota en el historial:<br/>'14:35 — pasó de funcionando<br/>a fuera de servicio'"]
+    Q --> P
+    P -- "Sí, igual" --> N
+    P -- "No, cambió" --> Y
+    </pre></div>
+    <div class="callout">
+      <p>Con este método, según las mediciones hechas, el espacio gratuito alcanza para <strong>aproximadamente 20 meses</strong> de historial. Cuando se acerque al límite, los datos viejos se pueden archivar aparte.</p>
+    </div>
+  </section>
+
+  <section class="card" id="datos">
+    <h2><span class="num">06</span>Cómo está organizada la información</h2>
+    <p>La base de datos tiene tres “planillas”:</p>
+    <div class="tablas">
+      <div class="tabla">
+        <span class="tag fijo">Tamaño fijo</span>
+        <div class="name">📋 Catálogo de equipos</div>
+        <div class="what">Un renglón por ascensor o escalera, con su línea, estación y descripción. Se escribe una sola vez (~424 renglones).</div>
+      </div>
+      <div class="tabla">
+        <span class="tag fijo">Tamaño fijo</span>
+        <div class="name">🟢 Estado actual</div>
+        <div class="what">Cómo está cada equipo <em>ahora mismo</em> y desde cuándo. Se pisa en cada consulta, así que siempre ocupa lo mismo.</div>
+      </div>
+      <div class="tabla">
+        <span class="tag crece">Crece</span>
+        <div class="name">📜 Historial de cambios</div>
+        <div class="what">Un renglón por cada vez que un equipo cambió de estado. Permite responder “¿cuántas veces falló este ascensor este mes?”.</div>
+      </div>
+    </div>
+    <p class="muted" style="margin-top:14px">Para no repetir “Línea B – Callao – Ascensor de andén a vestíbulo” miles de veces, el historial solo guarda un número que apunta al catálogo, como un número de ficha. Eso ahorra mucho espacio.</p>
+  </section>
+
+  <section class="card" id="web">
+    <h2><span class="num">07</span>La página web: qué ve la gente</h2>
+    <p>Cuando alguien abre la página, primero le pide a la base una consulta fresca a EMOVA (si tarda, sigue sin esperar) y después trae los datos. La página <strong>no necesita un servidor propio</strong>: lee directo de Supabase, que solo permite leer.</p>
+    <table>
+      <thead><tr><th>Pestaña</th><th>Qué muestra</th></tr></thead>
+      <tbody>
+        <tr><td>Estado actual</td><td>Primero, los equipos fuera de servicio en este momento. Debajo, todas las líneas para desplegar y ver cada equipo.</td></tr>
+        <tr><td>Histórico</td><td>Se elige un rango de tiempo y aparece un gráfico con la cantidad de cambios y el detalle de qué pasó con cada equipo.</td></tr>
+        <tr><td>Mapa</td><td>El trazado de las líneas sobre el mapa de la ciudad, con cada estación pintada según qué parte de sus equipos funciona:
+          <span class="chip good">todo ok</span> · <span class="chip warning">parcial</span> · <span class="chip critical">todo caído</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card" id="panorama">
+    <h2><span class="num">08</span>Panorama completo</h2>
+    <div class="diagram"><pre class="mermaid">
+flowchart TB
+    USER["👥 Público"]
+    GP["🌐 Página web<br/>(GitHub Pages)"]
+    OSM["🗺️ Mapa de fondo<br/>(OpenStreetMap)"]
+    subgraph supa["Supabase · plan gratuito"]
+        CRON["⏰ Despertador<br/>cada 2 min"]
+        FN["🤖 Función recolectora"]
+        DB[("🗄️ Base de datos")]
+    end
+    EMOVA["🚇 API pública de EMOVA"]
+    USER --> GP
+    GP -- "dibuja" --> OSM
+    GP -- "lee (solo lectura)" --> DB
+    GP -. "pide actualización" .-> FN
+    CRON -- "despierta" --> FN
+    FN -- "guarda cambios" --> DB
+    FN -- "consulta" --> EMOVA
+    </pre></div>
+  </section>
+
+  <section class="card" id="faq">
+    <h2><span class="num">09</span>Preguntas frecuentes</h2>
+    <details><summary>¿Los datos son oficiales?</summary>
+      <p>Vienen de la información pública de EMOVA. El proyecto no los modifica: solo los guarda y los ordena. Si EMOVA informa algo incorrecto, acá se va a ver igual.</p></details>
+    <details><summary>¿Qué tan actualizados están?</summary>
+      <p>Se consultan cada 2 minutos y, además, cada vez que alguien abre la página se intenta hacer una consulta en el momento.</p></details>
+    <details><summary>¿Puede alguien alterar los datos?</summary>
+      <p>No. Leer es público, pero escribir requiere una llave secreta que solo tiene el robot recolector.</p></details>
+    <details><summary>¿Qué pasa si EMOVA se cae un rato?</summary>
+      <p>Esa consulta falla y no se anota nada; en la siguiente, 2 minutos después, se retoma normalmente. La página sigue mostrando el último estado conocido.</p></details>
+    <details><summary>¿Cuánto cuesta mantenerlo?</summary>
+      <p>Nada: Supabase y GitHub se usan dentro de sus planes gratuitos. Se estima que el espacio gratuito alcanza para cerca de 20 meses de historial.</p></details>
+    <details><summary>¿Se guarda algo de quienes visitan la página?</summary>
+      <p>No. El proyecto solo guarda el estado de los equipos del subte.</p></details>
+    <details><summary>¿Se pueden usar los datos para otra cosa?</summary>
+      <p>Sí. Como la lectura es pública, cualquier persona u organización puede consultarlos para hacer sus propios análisis o informes.</p></details>
+  </section>
+
+  <section class="card" id="glosario">
+    <h2><span class="num">10</span>Glosario</h2>
+    <dl class="glosario">
+      <dt>API</dt><dd>Una “ventanilla” en internet donde un programa le pide datos a otro.</dd>
+      <dt>Equipo / acceso</dt><dd>Cada ascensor o escalera mecánica del subte.</dd>
+      <dt>Base de datos</dt><dd>Un lugar ordenado donde se guarda información para consultarla después.</dd>
+      <dt>Nube</dt><dd>Computadoras de otras empresas que se usan a través de internet.</dd>
+      <dt>Despertador (cron)</dt><dd>Una tarea programada para ejecutarse sola en un horario fijo.</dd>
+      <dt>Historial</dt><dd>El registro de cada cambio de estado, con su fecha y hora.</dd>
+      <dt>Plan gratuito</dt><dd>El nivel de uso que un servicio ofrece sin cobrar.</dd>
+      <dt>GitHub</dt><dd>Sitio donde se guarda y comparte el código de programas.</dd>
+      <dt>Supabase</dt><dd>Servicio de base de datos en la nube.</dd>
+      <dt>OpenStreetMap</dt><dd>Mapa del mundo libre, hecho por una comunidad de voluntarios.</dd>
+    </dl>
+  </section>
+
+  <footer>
+    Fuente de datos: API pública de accesibilidad de EMOVA ·
+    <a href="https://github.com/juanfere/accesibilidad_subte" target="_blank" rel="noopener">código</a>
+  </footer>
+</div>
+
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+
+  const css = getComputedStyle(document.documentElement);
+  const v = (name) => css.getPropertyValue(name).trim();
+
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: "base",
+    fontFamily: "Archivo, system-ui, sans-serif",
+    themeVariables: {
+      darkMode: css.getPropertyValue("color-scheme").trim() === "dark",
+      background: v("--surface-2"),
+      fontFamily: "Archivo, system-ui, sans-serif",
+      fontSize: "15px",
+      primaryColor: v("--surface"),
+      primaryTextColor: v("--ink"),
+      primaryBorderColor: v("--accent"),
+      secondaryColor: v("--accent-bg"),
+      tertiaryColor: v("--surface-2"),
+      lineColor: v("--ink-muted"),
+      textColor: v("--ink"),
+      clusterBkg: v("--surface"),
+      clusterBorder: v("--border"),
+      edgeLabelBackground: v("--surface-2"),
+      actorBkg: v("--surface"),
+      actorBorder: v("--accent"),
+      actorTextColor: v("--ink"),
+      signalColor: v("--ink-secondary"),
+      signalTextColor: v("--ink"),
+      noteBkgColor: v("--warning-bg"),
+      noteBorderColor: v("--warning"),
+      noteTextColor: v("--ink"),
+      labelBoxBkgColor: v("--accent-bg"),
+      labelBoxBorderColor: v("--accent"),
+      labelTextColor: v("--ink"),
+      loopTextColor: v("--ink"),
+      activationBkgColor: v("--accent-bg"),
+      sequenceNumberColor: v("--surface")
+    },
+    flowchart: { curve: "basis", htmlLabels: true },
+    sequence: { mirrorActors: false }
+  });
+
+  // Se renderiza uno por uno con id propio: mermaid.run() arma los ids con
+  // Date.now() y dos diagramas en el mismo milisegundo se pisaban.
+  const diagramas = document.querySelectorAll(".diagram .mermaid");
+  for (const [i, el] of diagramas.entries()) {
+    try {
+      // innerHTML (no textContent): el navegador convierte los <br/> de las
+      // etiquetas en elementos y textContent los perdería.
+      const src = el.innerHTML.replace(/&gt;/g, ">").replace(/&lt;/g, "<").replace(/&amp;/g, "&");
+      const { svg } = await mermaid.render("diagrama-" + i, src);
+      el.innerHTML = svg;
+    } catch (err) {
+      // Si falla, queda el texto crudo en vez de un hueco vacío.
+    }
+    el.dataset.processed = "true";
+  }
+</script>
+</body>
+</html>

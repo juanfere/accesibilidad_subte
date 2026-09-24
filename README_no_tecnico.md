@@ -22,7 +22,7 @@ estado de esos equipos **en ese momento**, pero:
 - **no es fácil de mirar**: son datos pensados para computadoras, no para
   personas.
 
-Este proyecto **consulta esa información cada 5 minutos, la guarda y arma un
+Este proyecto **consulta esa información cada 2 minutos, la guarda y arma un
 historial**, y la muestra en una página web con listados, gráficos y un mapa.
 
 ---
@@ -32,7 +32,7 @@ historial**, y la muestra en una página web con listados, gráficos y un mapa.
 ```mermaid
 flowchart LR
     A["🚇 EMOVA<br/>publica el estado<br/>de ascensores y escaleras"]
-    B["🤖 Robot automático<br/>pregunta cada 5 minutos"]
+    B["🤖 Robot automático<br/>pregunta cada 2 minutos"]
     C["🗄️ Base de datos<br/>guarda el estado actual<br/>y todos los cambios"]
     D["🌐 Página web<br/>muestra listados,<br/>gráficos y mapa"]
     E["👥 Personas<br/>consultan desde el<br/>celular o la compu"]
@@ -48,7 +48,7 @@ Son cuatro piezas:
 | Pieza | Qué es, en criollo | Servicio que se usa | ¿Cuesta plata? |
 |---|---|---|---|
 | **Fuente de datos** | La "ventanilla" pública donde EMOVA informa el estado de cada ascensor y escalera | API pública de EMOVA / Metrovías | No |
-| **Robot recolector** | Un programa que se despierta solo cada 5 minutos, pregunta y anota | GitHub Actions (y una función de Supabase) | No |
+| **Robot recolector** | Un programa que se despierta solo cada 2 minutos, pregunta y anota | Supabase (tarea programada + función) | No |
 | **Base de datos** | La "libreta" donde queda todo guardado | Supabase | No (plan gratuito) |
 | **Página web** | El tablero que ve la gente | GitHub Pages + OpenStreetMap para el mapa | No |
 
@@ -68,27 +68,26 @@ equipos** en toda la red (líneas A, B, C, D, E y H).
 
 No hace falta usuario ni contraseña: es información pública.
 
-### 🤖 GitHub Actions (el robot con despertador)
+### 🤖 El robot con despertador (dentro de Supabase)
 
-GitHub es el sitio donde vive el código del proyecto. Además de guardar el
-código, ofrece **GitHub Actions**: computadoras en la nube que ejecutan
-tareas de forma automática según un horario.
+El robot vive en el mismo servicio donde se guardan los datos, Supabase, y
+tiene dos partes:
 
-Acá se le dijo: *"cada 5 minutos, ejecutá el programa que consulta a EMOVA y
-guarda los resultados"*. GitHub presta una computadora por unos segundos, la
-tarea corre y la computadora se apaga. Como el repositorio es público, esto
-no tiene costo.
+- un **despertador**: una tarea programada que suena **cada 2 minutos**;
+- una **función**: un pequeño programa que, cuando suena el despertador,
+  le pregunta a EMOVA cómo están los equipos y anota lo que cambió.
 
-Como respaldo, la base de datos (Supabase) también tiene su propia función
-recolectora que hace lo mismo y que la página web "despierta" cada vez que
+Como todo pasa dentro de Supabase, no hace falta ninguna otra computadora ni
+servicio. Además, la página web también "despierta" a la función cada vez que
 alguien entra, para mostrar datos lo más frescos posible.
 
 ### 🗄️ Supabase (la libreta)
 
 Supabase es un servicio de **base de datos en la nube**. Es el lugar donde se
-guarda todo de forma ordenada. Tiene dos ventajas importantes para este
+guarda todo de forma ordenada. Tiene tres ventajas importantes para este
 proyecto:
 
+- ahí mismo corre el **robot recolector** (ver arriba);
 - el **plan gratuito** alcanza (hasta 500 MB);
 - permite que cualquiera **lea** los datos desde internet, pero solo el robot
   (que tiene una llave secreta) puede **escribir**. Así nadie puede alterar
@@ -96,23 +95,23 @@ proyecto:
 
 ### 🌐 GitHub Pages + OpenStreetMap (la vidriera)
 
-La página web es un único archivo que GitHub publica gratis (**GitHub
-Pages**). Cuando alguien la abre, la página le pide los datos directamente a
-Supabase y los dibuja. El mapa de fondo viene de **OpenStreetMap**, un mapa
+GitHub es el sitio donde vive el código del proyecto. Además, publica gratis
+la página web, que es un único archivo (**GitHub Pages**). Cuando alguien la
+abre, la página le pide los datos directamente a Supabase y los dibuja. El mapa de fondo viene de **OpenStreetMap**, un mapa
 mundial libre y colaborativo.
 
 ---
 
-## 4. ¿Qué pasa cada 5 minutos?
+## 4. ¿Qué pasa cada 2 minutos?
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant R as 🤖 Robot (GitHub Actions)
+    participant R as 🤖 Robot (función de Supabase)
     participant E as 🚇 EMOVA
     participant S as 🗄️ Base de datos (Supabase)
 
-    Note over R: Suena el despertador (cada 5 min)
+    Note over R: Suena el despertador (cada 2 min)
     R->>E: ¿Cómo están todos los ascensores y escaleras?
     E-->>R: Lista completa: ~424 equipos con su estado
     R->>S: ¿Cómo estaban la última vez que pregunté?
@@ -134,7 +133,7 @@ Todo el ciclo tarda unos pocos segundos.
 ## 5. La idea clave: anotar solo los cambios
 
 Una forma ingenua sería guardar una "foto" completa de los 424 equipos cada
-5 minutos. Eso son más de **120.000 anotaciones por día**, casi todas
+2 minutos. Eso son más de **300.000 anotaciones por día**, casi todas
 repetidas ("sigue funcionando", "sigue funcionando"…). El espacio gratuito se
 llenaría en pocos días.
 
@@ -231,26 +230,24 @@ flowchart LR
         EMOVA["🚇 API de EMOVA"]
     end
 
-    subgraph GitHub["GitHub (gratis)"]
-        CODE["📁 Código del proyecto"]
-        GA["🤖 GitHub Actions<br/>cada 5 min"]
-        GP["🌐 GitHub Pages<br/>(la página web)"]
+    subgraph Supabase["Supabase (plan gratuito)"]
+        CRON["⏰ Despertador<br/>cada 2 min"]
+        FN["🤖 Función recolectora"]
+        DB[("🗄️ Base de datos<br/>catálogo · estado actual · historial")]
     end
 
-    subgraph Supabase["Supabase (plan gratuito)"]
-        FN["⚡ Función recolectora<br/>(respaldo)"]
-        DB[("🗄️ Base de datos<br/>catálogo · estado actual · historial")]
+    subgraph GitHub["GitHub (gratis)"]
+        CODE["📁 Código del proyecto"]
+        GP["🌐 GitHub Pages<br/>(la página web)"]
     end
 
     OSM["🗺️ OpenStreetMap<br/>(mapa de fondo)"]
     USER["👥 Público"]
 
-    CODE -.-> GA
-    CODE -.-> GP
-    GA -- "consulta" --> EMOVA
-    GA -- "guarda cambios<br/>(llave secreta)" --> DB
+    CRON -- "despierta" --> FN
     FN -- "consulta" --> EMOVA
-    FN -- "guarda cambios" --> DB
+    FN -- "guarda cambios<br/>(llave secreta)" --> DB
+    CODE -.-> GP
     USER --> GP
     GP -- "lee datos<br/>(solo lectura)" --> DB
     GP -- "pide actualización" --> FN
@@ -267,7 +264,7 @@ modifica: solo los guarda y los ordena. Si EMOVA informa algo incorrecto, acá
 se va a ver igual.
 
 **¿Qué tan actualizados están?**
-Se consultan cada 5 minutos y, además, cada vez que alguien abre la página se
+Se consultan cada 2 minutos y, además, cada vez que alguien abre la página se
 intenta hacer una consulta en el momento.
 
 **¿Puede alguien alterar los datos?**
@@ -275,11 +272,11 @@ No. Leer es público, pero escribir requiere una llave secreta que solo tiene
 el robot recolector.
 
 **¿Qué pasa si EMOVA se cae un rato?**
-Esa consulta falla y no se anota nada; en la siguiente (5 minutos después)
+Esa consulta falla y no se anota nada; en la siguiente (2 minutos después)
 se retoma normalmente. La página sigue mostrando el último estado conocido.
 
 **¿Cuánto cuesta mantenerlo?**
-Nada: GitHub y Supabase se usan dentro de sus planes gratuitos. Se estima
+Nada: Supabase y GitHub se usan dentro de sus planes gratuitos. Se estima
 que el espacio gratuito alcanza para cerca de 20 meses de historial.
 
 **¿Qué información guarda de las personas que visitan la página?**
