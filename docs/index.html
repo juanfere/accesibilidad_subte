@@ -201,6 +201,15 @@
   .problema-main .titulo { font-weight: 600; font-size: 0.9rem; }
   .problema-main .desc { font-size: 0.78rem; color: var(--ink-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .problema-since { font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; color: var(--critical); white-space: nowrap; }
+  .problema-row.ok { background: var(--good-bg); border-color: color-mix(in srgb, var(--good) 35%, transparent); }
+  .problema-row.ok .problema-since { color: var(--good); }
+  .problema-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; text-align: right; }
+  .problema-lecturas { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; color: var(--ink-secondary); white-space: nowrap; }
+  .tag-nunca {
+    font-family: "IBM Plex Mono", monospace; font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+    color: var(--critical); border: 1px solid var(--critical); border-radius: 999px; padding: 0 6px; margin-left: 6px; vertical-align: 1px;
+  }
+  .ver-mas { margin-top: 10px; }
 
   .all-ok {
     display: flex; align-items: center; gap: 10px;
@@ -287,6 +296,8 @@
     .tile { flex: 1 1 auto; min-width: 0; }
     .problema-row, .evento-row { grid-template-columns: 1fr; }
     .problema-since, .evento-time { text-align: left; }
+    .problema-row .linea-chip { justify-self: start; }
+    .problema-meta { flex-direction: row; align-items: baseline; gap: 10px; }
     .mapa-svg-box { height: 380px; }
   }
 </style>
@@ -311,8 +322,9 @@
   <main>
     <section id="panel-actual" class="panel active">
       <div class="card">
-        <h2>Accesos con problemas ahora</h2>
-        <p class="hint">Ascensores y escaleras mecánicas reportados como fuera de servicio en la última consulta.</p>
+        <h2>Estado de cada acceso</h2>
+        <p class="hint" id="vista-hint">Ascensores y escaleras mecánicas fuera de servicio en la última consulta, primero los que llevan más tiempo así.</p>
+        <div class="interval-row" id="vista-row" role="group" aria-label="Filtrar accesos"></div>
         <div id="problemas-container"><div class="loading">Cargando…</div></div>
       </div>
       <div class="card">
@@ -358,7 +370,7 @@
   </main>
 
   <footer>
-    Fuente: API pública de accesibilidad de EMOVA · datos propios recolectados cada 2 min ·
+    Fuente: API pública de accesibilidad de EMOVA · datos propios recolectados periódicamente ·
     <a href="https://github.com/juanfere/accesibilidad_subte" target="_blank" rel="noopener">código</a>
   </footer>
 </div>
@@ -479,31 +491,151 @@
     document.getElementById("summary-tiles").innerHTML =
       '<div class="tile status-' + bucket + '"><span class="tile-value mono">' + pct + '%</span><span class="tile-label">Funcionando</span></div>' +
       '<div class="tile"><span class="tile-value mono">' + total + '</span><span class="tile-label">Accesos totales</span></div>' +
-      '<div class="tile status-' + (caidos > 0 ? "critical" : "good") + '"><span class="tile-value mono">' + caidos + '</span><span class="tile-label">Caídos ahora</span></div>';
+      '<div class="tile status-' + (caidos > 0 ? "critical" : "good") + '"><span class="tile-value mono">' + caidos + '</span><span class="tile-label">Caídos ahora</span></div>' +
+      '<div class="tile" id="tile-lecturas" hidden></div>';
   }
 
-  function renderProblemas(rows) {
-    var caidos = rows.filter(function (r) { return !r.funcionando; })
-      .sort(function (a, b) { return a.ultimo_cambio < b.ultimo_cambio ? 1 : -1; });
+  /* Cuánto se está monitoreando: lecturas de las últimas 24 h. Si la tabla
+     consultas todavía no existe, el tile queda oculto. */
+  async function renderLecturas() {
+    try {
+      var desde = new Date(Date.now() - 24 * 3600e3).toISOString();
+      var cs = await supaGet("consultas?select=ok,timestamp&timestamp=gte." + encodeURIComponent(desde) + "&order=timestamp.desc");
+      var ok = cs.filter(function (c) { return c.ok; }).length;
+      var fallidas = cs.length - ok;
+      var tile = document.getElementById("tile-lecturas");
+      tile.title = ok + " lecturas exitosas y " + fallidas + " fallidas en las últimas 24 horas" +
+        (cs.length ? "; la última " + (cs[0].ok ? "salió bien" : "falló") + " (" + relTime(cs[0].timestamp) + ")." : ".");
+      tile.innerHTML = '<span class="tile-value mono">' + ok + (fallidas ? '<span style="color:var(--critical);font-size:0.8em"> +' + fallidas + '✕</span>' : '') + '</span>' +
+        '<span class="tile-label">Lecturas 24 h</span>';
+      tile.hidden = false;
+    } catch (err) {
+      /* sin tabla consultas: no mostramos el tile */
+    }
+  }
+
+  /* Duración legible: "12 min", "3 h 5 min", "2 d 4 h". */
+  function fmtDur(ms) {
+    var mins = Math.max(0, Math.floor(ms / 60000));
+    if (mins < 60) return mins + " min";
+    var hrs = Math.floor(mins / 60);
+    if (hrs < 24) return hrs + " h" + (mins % 60 ? " " + (mins % 60) + " min" : "");
+    var days = Math.floor(hrs / 24);
+    return days + " d" + (hrs % 24 ? " " + (hrs % 24) + " h" : "");
+  }
+
+  function inicioDeHoy() {
+    var d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  /* Fuera de servicio en todas las lecturas desde que medimos. */
+  function nuncaAnduvo(r) {
+    return !r.funcionando && r.ultima_vez_funcionando === null;
+  }
+
+  /* Fuera de servicio en todas las lecturas de hoy (y hubo lecturas hoy). */
+  function noAnduvoHoy(r) {
+    var hoy = inicioDeHoy();
+    return !r.funcionando &&
+      new Date(r.ultima_consulta) >= hoy &&
+      (r.ultima_vez_funcionando === null || new Date(r.ultima_vez_funcionando) < hoy);
+  }
+
+  /* Cuánto lleva en el estado actual y cuántas lecturas lo confirman.
+     Si no hay lectura previa al cambio (cambio_desde vacío), el acceso está
+     así desde que empezamos a medir: la duración es un mínimo ("≥"). */
+  function describirEstado(r) {
+    var minimo = !r.cambio_desde;
+    var dur = (minimo ? "≥ " : "") + fmtDur(Date.now() - new Date(r.ultimo_cambio).getTime());
+    var lecturas = r.lecturas_en_estado != null
+      ? r.lecturas_en_estado + (r.lecturas_en_estado === 1 ? " lectura" : " lecturas")
+      : "";
+    var detalle = minimo
+      ? "Así desde la primera lectura (" + fmtTime(r.primera_consulta || r.ultimo_cambio) + "); no sabemos desde cuándo antes de eso."
+      : "Cambió entre la lectura de las " + fmtTime(r.cambio_desde) + " y la de las " + fmtTime(r.ultimo_cambio) + ".";
+    if (lecturas) detalle += " Confirmado en " + lecturas + " seguidas.";
+    return { dur: dur, lecturas: lecturas, detalle: detalle };
+  }
+
+  var VISTAS = [
+    { key: "caidos", label: "Fuera de servicio",
+      hint: "Ascensores y escaleras mecánicas fuera de servicio en la última consulta, primero los que llevan más tiempo así.",
+      filtro: function (r) { return !r.funcionando; }, asc: true },
+    { key: "nunca", label: "Nunca anduvo",
+      hint: "Fuera de servicio en todas las lecturas desde que empezamos a medir.",
+      filtro: nuncaAnduvo, asc: true },
+    { key: "hoy", label: "No anduvo hoy",
+      hint: "Fuera de servicio en todas las lecturas de hoy (desde las 00:00).",
+      filtro: noAnduvoHoy, asc: true },
+    { key: "ok", label: "Funcionando",
+      hint: "Accesos funcionando en la última consulta, primero los que volvieron a andar más recientemente.",
+      filtro: function (r) { return r.funcionando; }, asc: false }
+  ];
+  var vistaActual = "caidos";
+  var LIMITE_LISTA = 40;
+
+  function renderVistas(rows) {
+    document.getElementById("vista-row").innerHTML = VISTAS.map(function (v) {
+      var n = rows.filter(v.filtro).length;
+      return '<button class="interval-btn" data-vista="' + v.key + '" aria-pressed="' + (v.key === vistaActual) + '">' +
+        v.label + ' <span class="mono">' + n + '</span></button>';
+    }).join("");
+    document.querySelectorAll("#vista-row .interval-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        vistaActual = btn.dataset.vista;
+        renderVistas(rows);
+        renderProblemas(rows);
+      });
+    });
+  }
+
+  function renderProblemas(rows, mostrarTodos) {
+    var vista = VISTAS.filter(function (v) { return v.key === vistaActual; })[0];
+    document.getElementById("vista-hint").textContent = vista.hint;
+
+    var lista = rows.filter(vista.filtro).sort(function (a, b) {
+      if (a.ultimo_cambio === b.ultimo_cambio) return 0;
+      return (a.ultimo_cambio < b.ultimo_cambio ? -1 : 1) * (vista.asc ? 1 : -1);
+    });
 
     var container = document.getElementById("problemas-container");
 
-    if (caidos.length === 0) {
-      container.innerHTML = '<div class="all-ok">Todos los accesos relevados están funcionando.</div>';
+    if (lista.length === 0) {
+      container.innerHTML = vista.key === "ok"
+        ? '<div class="empty-state">No hay accesos funcionando en la última consulta.</div>'
+        : '<div class="all-ok">' + ({
+            nunca: "Todos los accesos anduvieron en algún momento.",
+            hoy: "Todos los accesos anduvieron en algún momento de hoy."
+          }[vista.key] || "Todos los accesos relevados están funcionando.") + '</div>';
       return;
     }
 
-    container.innerHTML = '<div class="problema-list">' + caidos.map(function (r) {
+    var visibles = mostrarTodos ? lista : lista.slice(0, LIMITE_LISTA);
+    container.innerHTML = '<div class="problema-list">' + visibles.map(function (r) {
       var codigo = lineaCode(r.linea);
-      return '<div class="problema-row">' +
+      var e = describirEstado(r);
+      return '<div class="problema-row' + (r.funcionando ? " ok" : "") + '" title="' + escapeHtml(e.detalle) + '">' +
         '<span class="linea-chip" style="background:' + lineaColor(codigo) + '"><span class="linea-dot"></span>' + escapeHtml(codigo) + '</span>' +
         '<div class="problema-main">' +
-          '<span class="titulo">' + escapeHtml(r.estacion) + ' · <span class="mono">' + escapeHtml(r.nombre) + '</span></span>' +
+          '<span class="titulo">' + escapeHtml(r.estacion) + ' · <span class="mono">' + escapeHtml(r.nombre) + '</span>' +
+            (nuncaAnduvo(r) ? '<span class="tag-nunca">nunca anduvo</span>'
+              : noAnduvoHoy(r) ? '<span class="tag-nunca">no anduvo hoy</span>' : '') + '</span>' +
           '<span class="desc">' + escapeHtml(r.descripcion || "") + '</span>' +
         '</div>' +
-        '<span class="problema-since">' + relTime(r.ultimo_cambio) + '</span>' +
+        '<div class="problema-meta">' +
+          '<span class="problema-since">' + escapeHtml(e.dur) + '</span>' +
+          (e.lecturas ? '<span class="problema-lecturas">' + escapeHtml(e.lecturas) + '</span>' : '') +
+        '</div>' +
       '</div>';
-    }).join("") + '</div>';
+    }).join("") + '</div>' +
+    (visibles.length < lista.length
+      ? '<button class="interval-btn ver-mas" id="ver-mas">Mostrar los ' + lista.length + '</button>'
+      : '');
+
+    var verMas = document.getElementById("ver-mas");
+    if (verMas) verMas.addEventListener("click", function () { renderProblemas(rows, true); });
   }
 
   function renderLineas(rows) {
@@ -526,10 +658,11 @@
       var estacionesHtml = estaciones.map(function (est) {
         var accesos = porLinea[codigo][est].sort(function (a, b) { return a.nombre.localeCompare(b.nombre); });
         var rowsHtml = accesos.map(function (a) {
-          return '<div class="acceso-row ' + (a.funcionando ? "" : "down") + '">' +
+          return '<div class="acceso-row ' + (a.funcionando ? "" : "down") + '" title="' + escapeHtml(describirEstado(a).detalle) + '">' +
             '<span class="status-dot ' + (a.funcionando ? "ok" : "down") + '"></span>' +
             '<span class="acceso-code">' + escapeHtml(a.nombre) + '</span>' +
             '<span>' + escapeHtml(a.funcionando ? "OK" : "Fuera de servicio") + '</span>' +
+            '<span class="mono" style="margin-left:auto">' + escapeHtml(describirEstado(a).dur) + '</span>' +
           '</div>';
         }).join("");
         return '<div class="estacion-block"><div class="est-name">' + escapeHtml(est) + '</div>' + rowsHtml + '</div>';
@@ -775,7 +908,7 @@
 
   // Best-effort: fuerza a la Edge Function a consultar la API de EMOVA de
   // nuevo antes de leer estado_actual, para no depender solo de que
-  // pg_cron haya pasado en los últimos 2 min. Si falla o tarda de más
+  // pg_cron haya pasado hace poco. Si falla o tarda de más
   // (cold start, EMOVA caída, etc.) seguimos igual con lo que ya hay en
   // Supabase: nunca debe bloquear el dashboard.
   async function forzarActualizacion() {
@@ -803,6 +936,8 @@
       var rows = await supaGet("estado_actual_legible?select=*&order=linea.asc,estacion.asc,nombre.asc");
       window.__estadoRows = rows;
       renderSummary(rows);
+      renderLecturas();
+      renderVistas(rows);
       renderProblemas(rows);
       renderLineas(rows);
       if (document.querySelector('.tab[data-tab="mapa"]').getAttribute("aria-selected") === "true") {

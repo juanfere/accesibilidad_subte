@@ -44,7 +44,8 @@ parquet) y borrarlas de la tabla (hot/cold storage), o pasar a Supabase Pro.
 1. Entrar a https://supabase.com, crear cuenta/loguearse, "New project"
    (plan Free).
 2. Una vez creado, ir a **SQL Editor** → **New query**, pegar el contenido
-   de `schema.sql` y ejecutarlo.
+   de `schema.sql` y ejecutarlo. Para empezar de cero sobre una base que
+   ya tiene tablas, ejecutar antes `drop.sql` (⚠️ borra todos los datos).
 3. Ir a **Project Settings → API** y copiar:
    - `Project URL` → `SUPABASE_URL`
    - `service_role` key (¡no la `anon`!) → `SUPABASE_KEY`. Esta key

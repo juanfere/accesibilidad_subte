@@ -7,6 +7,10 @@ cambió respecto de la consulta anterior. El texto (línea/estación/descripció
 vive en la tabla `accesos` y el historial solo referencia su id, para no
 repetirlo en cada fila (ver schema.sql).
 
+Cada corrida, salga bien o no, deja una fila en `consultas`, y cada acceso
+lleva la cuenta de cuántas lecturas seguidas lo vieron en su estado actual:
+así se puede distinguir "no cambió" de "no hubo lectura".
+
 Variables de entorno requeridas:
     SUPABASE_URL
     SUPABASE_KEY   (service_role key: bypassea RLS para poder escribir)
@@ -83,19 +87,12 @@ def sincronizar_dimension(supabase, accesos):
     return {(r["linea"], r["estacion"], r["nombre"]): r["id"] for r in catalogo}
 
 
-def main():
-    supabase_url = os.environ["SUPABASE_URL"]
-    supabase_key = os.environ["SUPABASE_KEY"]
-    supabase = create_client(supabase_url, supabase_key)
-
-    ahora = datetime.now(timezone.utc).isoformat()
-
+def registrar(supabase, ahora):
     data = consultar()
     accesos = aplanar(data)
 
     if not accesos:
-        print("Sin datos recibidos de la API")
-        sys.exit(1)
+        raise RuntimeError("Sin datos recibidos de la API")
 
     id_por_key = sincronizar_dimension(supabase, accesos)
 
@@ -125,6 +122,7 @@ def main():
                 "funcionando_nuevo": acceso["funcionando"],
                 "timestamp": ahora,
                 "fecha_actualizacion_api": acceso["fecha_actualizacion_api"],
+                "ultima_lectura_previa": previo["ultima_consulta"] if previo else None,
             })
 
         upserts.append({
@@ -134,6 +132,11 @@ def main():
             "fecha_actualizacion_api": acceso["fecha_actualizacion_api"],
             "ultima_consulta": ahora,
             "ultimo_cambio": ahora if cambio else previo["ultimo_cambio"],
+            "lecturas_en_estado": 1 if cambio else previo["lecturas_en_estado"] + 1,
+            # El cambio ocurrió entre la lectura anterior y esta.
+            "cambio_desde": (previo["ultima_consulta"] if previo else None) if cambio else previo["cambio_desde"],
+            "primera_consulta": previo["primera_consulta"] if previo else ahora,
+            "ultima_vez_funcionando": ahora if acceso["funcionando"] else (previo["ultima_vez_funcionando"] if previo else None),
         })
 
     supabase.table("estado_actual").upsert(upserts, on_conflict="acceso_id").execute()
@@ -141,7 +144,37 @@ def main():
     if cambios:
         supabase.table("estado_historial").insert(cambios).execute()
 
-    print(f"[{ahora}] OK - {len(accesos)} accesos consultados, {len(cambios)} cambios registrados")
+    return len(accesos), len(cambios)
+
+
+def main():
+    supabase_url = os.environ["SUPABASE_URL"]
+    supabase_key = os.environ["SUPABASE_KEY"]
+    supabase = create_client(supabase_url, supabase_key)
+
+    ahora = datetime.now(timezone.utc).isoformat()
+
+    try:
+        n_accesos, n_cambios = registrar(supabase, ahora)
+    except Exception as e:
+        # Queda registrado que se intentó y falló, para no confundir este
+        # hueco con "no cambió nada".
+        supabase.table("consultas").insert({
+            "timestamp": ahora,
+            "ok": False,
+            "error": f"{type(e).__name__}: {e}"[:500],
+        }).execute()
+        print(f"[{ahora}] ERROR - {e}")
+        sys.exit(1)
+
+    supabase.table("consultas").insert({
+        "timestamp": ahora,
+        "ok": True,
+        "accesos": n_accesos,
+        "cambios": n_cambios,
+    }).execute()
+
+    print(f"[{ahora}] OK - {n_accesos} accesos consultados, {n_cambios} cambios registrados")
 
 
 if __name__ == "__main__":

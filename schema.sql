@@ -1,5 +1,7 @@
 -- Esquema para el proyecto de accesibilidad del subte (EMOVA)
 -- Ejecutar en el SQL Editor de Supabase (Project > SQL Editor > New query)
+-- Para empezar de cero sobre una base existente, correr antes drop.sql
+-- (borra todos los datos).
 
 -- Dimensión: catálogo de accesos físicos (ascensores/escaleras). No crece con
 -- el tiempo (~424 filas fijas), así que el texto (línea/estación/descripción)
@@ -22,7 +24,18 @@ create table if not exists estado_actual (
     funcionando boolean,
     fecha_actualizacion_api timestamptz,
     ultima_consulta timestamptz not null,
-    ultimo_cambio timestamptz not null
+    ultimo_cambio timestamptz not null,
+    -- Lecturas exitosas consecutivas en el estado actual (incluida la que
+    -- detectó el cambio).
+    lecturas_en_estado integer not null default 1,
+    -- Última lectura exitosa ANTERIOR al cambio: el cambio ocurrió entre
+    -- cambio_desde y ultimo_cambio. NULL si está así desde la primera lectura.
+    cambio_desde timestamptz,
+    -- Primera vez que se leyó este acceso.
+    primera_consulta timestamptz not null,
+    -- Última lectura en la que se lo vio funcionando. NULL = nunca, desde
+    -- que medimos. Permite ver lo que no anduvo en todo el día o nunca.
+    ultima_vez_funcionando timestamptz
 );
 
 -- Historial de cambios: la única tabla que crece con el tiempo.
@@ -35,11 +48,25 @@ create table if not exists estado_historial (
     funcionando_anterior boolean,
     funcionando_nuevo boolean,
     "timestamp" timestamptz not null default now(),
-    fecha_actualizacion_api timestamptz
+    fecha_actualizacion_api timestamptz,
+    ultima_lectura_previa timestamptz      -- lectura anterior al cambio
 );
 
 create index if not exists idx_historial_acceso_ts
     on estado_historial (acceso_id, "timestamp" desc);
+
+-- Una fila por corrida del recolector, haya salido bien o no. Permite
+-- distinguir "no cambió" (hubo lectura ok sin cambio) de "no hubo lectura".
+create table if not exists consultas (
+    id bigint generated always as identity primary key,
+    "timestamp" timestamptz not null default now(),
+    ok boolean not null,
+    accesos smallint,                     -- accesos devueltos por la API
+    cambios smallint,                     -- filas agregadas a estado_historial
+    error text                            -- motivo, si ok = false
+);
+
+create index if not exists idx_consultas_ts on consultas ("timestamp" desc);
 
 -- Lectura pública (para poder armar un dashboard/front sin backend propio),
 -- escritura solo con la service_role key (la usa el workflow de GitHub Actions
@@ -47,6 +74,7 @@ create index if not exists idx_historial_acceso_ts
 alter table accesos enable row level security;
 alter table estado_actual enable row level security;
 alter table estado_historial enable row level security;
+alter table consultas enable row level security;
 
 create policy "lectura publica accesos"
     on accesos for select
@@ -58,6 +86,10 @@ create policy "lectura publica estado_actual"
 
 create policy "lectura publica estado_historial"
     on estado_historial for select
+    using (true);
+
+create policy "lectura publica consultas"
+    on consultas for select
     using (true);
 
 -- Vistas de conveniencia con los nombres ya "des-normalizados" para consultar
@@ -72,7 +104,11 @@ select
     e.funcionando,
     e.fecha_actualizacion_api,
     e.ultima_consulta,
-    e.ultimo_cambio
+    e.ultimo_cambio,
+    e.lecturas_en_estado,
+    e.cambio_desde,
+    e.primera_consulta,
+    e.ultima_vez_funcionando
 from estado_actual e
 join accesos a on a.id = e.acceso_id;
 
@@ -88,6 +124,7 @@ select
     h.funcionando_anterior,
     h.funcionando_nuevo,
     h."timestamp",
-    h.fecha_actualizacion_api
+    h.fecha_actualizacion_api,
+    h.ultima_lectura_previa
 from estado_historial h
 join accesos a on a.id = h.acceso_id;
