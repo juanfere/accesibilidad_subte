@@ -54,7 +54,10 @@ async function rest(
   if (!res.ok) {
     throw new Error(`Supabase ${res.status} en ${path}: ${await res.text()}`);
   }
-  return res.status === 204 ? null : res.json();
+  // Con `Prefer: return=minimal` PostgREST responde 201 con body vacío (no
+  // 204), así que no alcanza con mirar el status.
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
 }
 
 const DATE_RE = /\/Date\((-?\d+)([+-]\d{4})?\)\//;
