@@ -111,9 +111,9 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  try {
-    const ahora = new Date().toISOString();
+  const ahora = new Date().toISOString();
 
+  try {
     const actuales = (await rest("estado_actual?select=*")) as any[];
     const ultimaConsultaPrevia = actuales.reduce(
       (max, r) => (r.ultima_consulta > max ? r.ultima_consulta : max),
@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
     const accesos = aplanar(data);
 
     if (accesos.length === 0) {
-      return jsonResponse({ error: "Sin datos recibidos de la API" }, 502);
+      throw new Error("Sin datos recibidos de la API");
     }
 
     await rest("accesos?on_conflict=linea,estacion,nombre", {
@@ -188,6 +188,7 @@ Deno.serve(async (req) => {
           funcionando_nuevo: acceso.funcionando,
           timestamp: ahora,
           fecha_actualizacion_api: acceso.fecha_actualizacion_api,
+          ultima_lectura_previa: previo ? previo.ultima_consulta : null,
         });
       }
 
@@ -198,6 +199,15 @@ Deno.serve(async (req) => {
         fecha_actualizacion_api: acceso.fecha_actualizacion_api,
         ultima_consulta: ahora,
         ultimo_cambio: cambio ? ahora : previo.ultimo_cambio,
+        lecturas_en_estado: cambio ? 1 : previo.lecturas_en_estado + 1,
+        // El cambio ocurrió entre la lectura anterior y esta.
+        cambio_desde: cambio
+          ? (previo ? previo.ultima_consulta : null)
+          : previo.cambio_desde,
+        primera_consulta: previo ? previo.primera_consulta : ahora,
+        ultima_vez_funcionando: acceso.funcionando
+          ? ahora
+          : (previo ? previo.ultima_vez_funcionando : null),
       });
     }
 
@@ -215,6 +225,17 @@ Deno.serve(async (req) => {
       });
     }
 
+    await rest("consultas", {
+      method: "POST",
+      prefer: "return=minimal",
+      body: JSON.stringify({
+        timestamp: ahora,
+        ok: true,
+        accesos: accesos.length,
+        cambios: cambios.length,
+      }),
+    });
+
     return jsonResponse({
       ok: true,
       timestamp: ahora,
@@ -223,6 +244,21 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error(err);
+    // Queda registrado que se intentó y falló, para no confundir este
+    // hueco con "no cambió nada".
+    try {
+      await rest("consultas", {
+        method: "POST",
+        prefer: "return=minimal",
+        body: JSON.stringify({
+          timestamp: ahora,
+          ok: false,
+          error: String(err).slice(0, 500),
+        }),
+      });
+    } catch (logErr) {
+      console.error(logErr);
+    }
     return jsonResponse({ error: String(err) }, 500);
   }
 });
