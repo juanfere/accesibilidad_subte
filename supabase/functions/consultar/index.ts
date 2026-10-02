@@ -137,27 +137,61 @@ Deno.serve(async (req) => {
       throw new Error("Sin datos recibidos de la API");
     }
 
-    await rest("accesos?on_conflict=linea,estacion,nombre", {
-      method: "POST",
-      prefer: "resolution=merge-duplicates,return=minimal",
-      body: JSON.stringify(
-        accesos.map((a) => ({
-          linea: a.linea,
-          descripcion_linea: a.descripcion_linea,
-          estacion: a.estacion,
-          nombre: a.nombre,
-          descripcion: a.descripcion,
-          tipo: a.tipo,
-        })),
-      ),
-    });
+   const clave = (a: { linea: string; estacion: string; nombre: string }) =>
+      `${a.linea}|${a.estacion}|${a.nombre}`;
 
-    const catalogo = (await rest(
-      "accesos?select=id,linea,estacion,nombre",
+    // 1) Leer lo que ya está guardado (lectura: no gasta números del contador)
+    let catalogo = (await rest(
+      "accesos?select=id,linea,estacion,nombre,descripcion_linea,descripcion,tipo",
     )) as any[];
+    const porClave = new Map(catalogo.map((r) => [clave(r), r]));
+
+    // 2) Quedarse solo con lo que es nuevo o cambió
+    const pendientes = accesos.filter((a) => {
+      const c = porClave.get(clave(a));
+      return (
+        !c ||
+        c.descripcion !== a.descripcion ||
+        String(c.tipo ?? "") !== String(a.tipo ?? "") ||
+        c.descripcion_linea !== a.descripcion_linea
+      );
+    });
+     console.log(
+      "pendientes:",
+      pendientes.length,
+      "ejemplo nuevo:",
+      JSON.stringify(pendientes[0]),
+      "ejemplo guardado:",
+      JSON.stringify(
+        pendientes[0] ? porClave.get(clave(pendientes[0])) : null,
+      ),
+    );
+
+    // 3) Escribir solo si hay algo pendiente (casi siempre no hay nada)
+    if (pendientes.length > 0) {
+      await rest("accesos?on_conflict=linea,estacion,nombre", {
+        method: "POST",
+        prefer: "resolution=merge-duplicates,return=minimal",
+        body: JSON.stringify(
+          pendientes.map((a) => ({
+            linea: a.linea,
+            descripcion_linea: a.descripcion_linea,
+            estacion: a.estacion,
+            nombre: a.nombre,
+            descripcion: a.descripcion,
+            tipo: a.tipo,
+          })),
+        ),
+      });
+      // Volver a leer para tener los ids de las filas recién creadas
+      catalogo = (await rest(
+        "accesos?select=id,linea,estacion,nombre",
+      )) as any[];
+    }
+
     const idPorKey = new Map<string, number>();
     for (const r of catalogo) {
-      idPorKey.set(`${r.linea}|${r.estacion}|${r.nombre}`, r.id);
+      idPorKey.set(clave(r), r.id);
     }
 
     const actualesPorId = new Map<number, any>();
