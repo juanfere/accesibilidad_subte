@@ -83,10 +83,20 @@ con `pg_cron` desde **adentro** de la base — un scheduler real, sin cola de
 CI compartida de por medio. El workflow de GitHub (`.github/workflows/consultar.yml`)
 quedó solo para correr `descargar.py` a mano si hace falta debuggear.
 
-1. **Deployar la función.** Sin necesidad de la Supabase CLI: en el
-   dashboard, ir a **Edge Functions → Create a new function**, nombrarla
-   `consultar`, y pegar el contenido de `supabase/functions/consultar/index.ts`.
-   Deployar. No hace falta configurar ningún secret: `SUPABASE_URL` y
+1. **Deployar la función** desde la raíz del repo con la Supabase CLI
+   (la primera vez pide `npx supabase login`):
+
+   ```bash
+   npx supabase functions deploy consultar --project-ref <project ref>
+   ```
+
+   El project ref es el `xxxxxxxxxxxx` de la URL del proyecto. Hacer push a
+   GitHub **no** redeploya la función: hay que correr esto cada vez que
+   cambia `index.ts`. Alternativa sin CLI: en el dashboard, **Edge Functions
+   → Create a new function**, nombrarla `consultar` y pegar el contenido de
+   `supabase/functions/consultar/index.ts` (ojo: es fácil terminar
+   deployando una versión vieja si el editor no quedó actualizado). No hace
+   falta configurar ningún secret: `SUPABASE_URL` y
    `SUPABASE_SERVICE_ROLE_KEY` ya están disponibles automáticamente dentro
    de toda Edge Function del proyecto.
 2. **Probarla a mano** antes de programarla: en la misma pantalla de la
@@ -109,19 +119,15 @@ corto y sin bloquear si falla); la función tiene un debounce de 20s para no
 pegarle dos veces seguidas a la API de EMOVA si eso coincide con el paso de
 `pg_cron`.
 
-### 5. Mover esto a un repo propio en GitHub
+### 5. Configurar el repo en GitHub
 
-Este proyecto se armó dentro del repo `sandbox` (privado, mezclado con otras
-cosas). Antes de usarlo en serio:
+El código vive en `juanfere/accesibilidad_subte`. Lo único que hay que
+configurar del lado de GitHub:
 
-1. Crear un repo nuevo en GitHub, público o privado (ya no depende de
-   minutos de Actions gratis, así que no es obligatorio que sea público).
-2. Copiar el contenido de esta carpeta (menos `accesibilidad_emova.csv` si
-   ya la migraste) a ese repo.
-3. Si vas a usar el workflow manual de debug: **Settings → Secrets and
+1. Si vas a usar el workflow manual de debug: **Settings → Secrets and
    variables → Actions → New repository secret**, cargar `SUPABASE_URL` y
    `SUPABASE_KEY`.
-4. Publicar `docs/` como GitHub Pages (**Settings → Pages → Source:
+2. Publicar `docs/` como GitHub Pages (**Settings → Pages → Source:
    Deploy from a branch → /docs**) si querés servir el dashboard desde ahí.
 
 ## Consultar los datos

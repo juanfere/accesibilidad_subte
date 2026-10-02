@@ -247,8 +247,17 @@
 
   .chart-wrap { margin-bottom: 16px; }
   .chart-wrap svg { width: 100%; height: auto; display: block; overflow: visible; }
-  .bar { fill: var(--accent); }
-  .bar-tooltip { pointer-events: none; }
+  .chart-wrap { position: relative; }
+  .chart-tooltip {
+    position: absolute; pointer-events: none; z-index: 2; white-space: nowrap;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow);
+    padding: 6px 10px; font-size: 0.78rem; color: var(--ink); transform: translate(-50%, calc(-100% - 12px));
+  }
+  .chart-tooltip .t { color: var(--ink-secondary); font-size: 0.72rem; }
+  .chart-tooltip .v { font-weight: 700; }
+  .chart-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.74rem; color: var(--ink-secondary); margin-top: 6px; }
+  .chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .chart-legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 
   .evento-list { display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--border); }
   .evento-row {
@@ -337,7 +346,7 @@
     <section id="panel-historico" class="panel">
       <div class="card">
         <h2>Cambios de estado</h2>
-        <p class="hint">Elegí un rango para ver qué accesos cambiaron de estado en ese período.</p>
+        <p class="hint">Elegí un rango para ver el % de accesos funcionando en cada lectura y qué accesos cambiaron de estado en ese período.</p>
         <div class="interval-row" id="interval-row"></div>
         <div class="chart-wrap" id="chart-container"></div>
         <div id="eventos-container"><div class="loading">Elegí un rango para empezar…</div></div>
@@ -717,62 +726,151 @@
       query += "&timestamp=gte." + encodeURIComponent(cutoff);
     }
 
+    renderChart(iv);
+
     try {
       var eventos = await supaGet(query);
-      renderChart(eventos, iv);
       renderEventos(eventos, iv);
     } catch (err) {
       container.innerHTML = '<div class="error-banner">No se pudo cargar el histórico: ' + escapeHtml(err.message) + '</div>';
     }
   }
 
-  function renderChart(eventos, iv) {
+  /* Lecturas exitosas del rango, paginando de a 1000 (el máximo que devuelve
+     PostgREST por request). */
+  async function cargarLecturas(iv) {
+    var base = "consultas?select=timestamp,accesos,funcionando&ok=is.true&funcionando=not.is.null&order=timestamp.asc";
+    if (iv.ms) base += "&timestamp=gte." + encodeURIComponent(new Date(Date.now() - iv.ms).toISOString());
+    var out = [];
+    for (var offset = 0; ; offset += 1000) {
+      var page = await supaGet(base + "&limit=1000&offset=" + offset);
+      out = out.concat(page);
+      if (page.length < 1000) return out;
+    }
+  }
+
+  var chartSeq = 0;
+
+  /* % de accesos funcionando en cada lectura: un punto por lectura, unidos
+     por una línea. Fondo con los mismos umbrales que statusBucket(). */
+  async function renderChart(iv) {
+    var seq = ++chartSeq;
     var chartContainer = document.getElementById("chart-container");
-    if (eventos.length === 0) { chartContainer.innerHTML = ""; return; }
+    chartContainer.innerHTML = '<div class="loading">Cargando…</div>';
 
-    var porHora = (iv.key === "1h" || iv.key === "6h" || iv.key === "24h");
-    var bucketMs = porHora ? 3600e3 : 24 * 3600e3;
+    var lecturas;
+    try {
+      lecturas = await cargarLecturas(iv);
+    } catch (err) {
+      if (seq !== chartSeq) return;
+      chartContainer.innerHTML = '<div class="error-banner">No se pudo cargar el % por lectura: ' + escapeHtml(err.message) + '</div>';
+      return;
+    }
+    if (seq !== chartSeq) return;  // se eligió otro rango mientras cargaba
 
-    var buckets = {};
-    eventos.forEach(function (e) {
-      var t = new Date(e.timestamp).getTime();
-      var b = Math.floor(t / bucketMs) * bucketMs;
-      buckets[b] = (buckets[b] || 0) + 1;
+    var puntos = lecturas.filter(function (l) { return l.accesos > 0; }).map(function (l) {
+      return { t: new Date(l.timestamp).getTime(), pct: (l.funcionando / l.accesos) * 100, ok: l.funcionando, total: l.accesos };
     });
+    if (puntos.length === 0) {
+      chartContainer.innerHTML = '<div class="empty-state">Sin lecturas en este rango.</div>';
+      return;
+    }
 
-    var keys = Object.keys(buckets).map(Number).sort(function (a, b) { return a - b; });
-    if (keys.length < 2) { chartContainer.innerHTML = ""; return; }
+    var W = 640, H = 200, padL = 34, padR = 8, padT = 8, padB = 22;
+    var t1 = Date.now();
+    var t0 = iv.ms ? t1 - iv.ms : puntos[0].t;
+    if (t1 - t0 < 60e3) t0 = t1 - 60e3;
+    puntos = puntos.filter(function (p) { return p.t >= t0; });
+    function x(t) { return padL + ((t - t0) / (t1 - t0)) * (W - padL - padR); }
+    function y(p) { return padT + (1 - p / 100) * (H - padT - padB); }
 
-    var maxVal = Math.max.apply(null, keys.map(function (k) { return buckets[k]; }));
-    var W = 640, H = 140, padL = 6, padR = 6, padT = 10, padB = 24;
-    var barGap = 2;
-    var barW = Math.max(2, (W - padL - padR) / keys.length - barGap);
-
-    var bars = keys.map(function (k, i) {
-      var v = buckets[k];
-      var h = maxVal ? (v / maxVal) * (H - padT - padB) : 0;
-      var x = padL + i * ((W - padL - padR) / keys.length);
-      var y = H - padB - h;
-      var label = porHora
-        ? new Date(k).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })
-        : new Date(k).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" });
-      return '<g class="bar-g"><rect class="bar" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + Math.max(h, 1).toFixed(1) + '" rx="3"><title>' + label + ': ' + v + ' cambio' + (v === 1 ? "" : "s") + '</title></rect></g>';
+    // Franjas de umbral: <50 crítico, 50–99 advertencia, 100 bien (una línea).
+    var bands =
+      '<rect x="' + padL + '" y="' + y(50) + '" width="' + (W - padL - padR) + '" height="' + (y(0) - y(50)) + '" fill="var(--critical-bg)"/>' +
+      '<rect x="' + padL + '" y="' + y(100) + '" width="' + (W - padL - padR) + '" height="' + (y(50) - y(100)) + '" fill="var(--warning-bg)"/>' +
+      '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + y(50) + '" y2="' + y(50) + '" stroke="var(--warning)" stroke-width="1" stroke-dasharray="4 3"/>' +
+      '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + y(100) + '" y2="' + y(100) + '" stroke="var(--good)" stroke-width="1.5" stroke-dasharray="4 3"/>' +
+      '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + y(0) + '" y2="' + y(0) + '" stroke="var(--border)" stroke-width="1"/>';
+    var mono = ' font-size="10" fill="var(--ink-muted)" font-family="IBM Plex Mono, monospace"';
+    var yLabels = [0, 50, 100].map(function (v) {
+      return '<text x="' + (padL - 6) + '" y="' + (y(v) + 3) + '" text-anchor="end"' + mono + '>' + v + '%</text>';
     }).join("");
 
-    var firstLabel = porHora
-      ? new Date(keys[0]).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })
-      : new Date(keys[0]).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" });
-    var lastLabel = porHora
-      ? new Date(keys[keys.length - 1]).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })
-      : new Date(keys[keys.length - 1]).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" });
+    // La línea se corta donde faltan lecturas (más de 10 min sin datos).
+    var GAP_MS = 10 * 60e3;
+    var path = puntos.map(function (p, i) {
+      var cmd = (i === 0 || p.t - puntos[i - 1].t > GAP_MS) ? "M" : "L";
+      return cmd + x(p.t).toFixed(1) + " " + y(p.pct).toFixed(1);
+    }).join(" ");
+
+    // Con muchas lecturas los puntos se pisan entre sí: se dibujan solo si
+    // quedan a 8px o más uno de otro; si no, queda la línea y el punto de
+    // cada lectura aparece al pasar el mouse.
+    var mostrarPuntos = (W - padL - padR) / puntos.length >= 8;
+    var dots = mostrarPuntos ? puntos.map(function (p) {
+      return '<circle cx="' + x(p.t).toFixed(1) + '" cy="' + y(p.pct).toFixed(1) + '" r="3.5" fill="' + statusColor(statusBucket(Math.round(p.pct))) + '" stroke="var(--surface)" stroke-width="1.5"/>';
+    }).join("") : "";
+
+    var porDia = (t1 - t0) > 2 * 24 * 3600e3;
+    function fmtEje(t) {
+      var d = new Date(t);
+      return porDia
+        ? d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" })
+        : d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+    }
+    var xLabels =
+      '<text x="' + padL + '" y="' + (H - 6) + '"' + mono + '>' + fmtEje(t0) + '</text>' +
+      '<text x="' + ((padL + W - padR) / 2) + '" y="' + (H - 6) + '" text-anchor="middle"' + mono + '>' + fmtEje((t0 + t1) / 2) + '</text>' +
+      '<text x="' + (W - padR) + '" y="' + (H - 6) + '" text-anchor="end"' + mono + '>' + fmtEje(t1) + '</text>';
 
     chartContainer.innerHTML =
-      '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Cambios de estado por ' + (porHora ? "hora" : "día") + '">' +
-      '<line x1="' + padL + '" y1="' + (H - padB) + '" x2="' + (W - padR) + '" y2="' + (H - padB) + '" stroke="var(--border)" stroke-width="1"/>' +
-      bars +
-      '<text x="' + padL + '" y="' + (H - 6) + '" font-size="10" fill="var(--ink-muted)" font-family="IBM Plex Mono, monospace">' + firstLabel + '</text>' +
-      '<text x="' + (W - padR) + '" y="' + (H - 6) + '" font-size="10" fill="var(--ink-muted)" text-anchor="end" font-family="IBM Plex Mono, monospace">' + lastLabel + '</text>' +
-      '</svg>';
+      '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Porcentaje de accesos funcionando en cada lectura">' +
+      bands + yLabels + xLabels +
+      '<path d="' + path + '" fill="none" stroke="var(--ink-secondary)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>' +
+      dots +
+      '<line class="cursor" y1="' + padT + '" y2="' + y(0) + '" stroke="var(--ink-muted)" stroke-width="1" visibility="hidden"/>' +
+      '<circle class="cursor-dot" r="5" stroke="var(--surface)" stroke-width="2" visibility="hidden"/>' +
+      '<rect class="hit" x="' + padL + '" y="' + padT + '" width="' + (W - padL - padR) + '" height="' + (y(0) - padT) + '" fill="transparent"/>' +
+      '</svg>' +
+      '<div class="chart-tooltip" hidden></div>' +
+      '<div class="chart-legend">' +
+        '<span><i style="background:var(--good)"></i>100%: todo funcionando</span>' +
+        '<span><i style="background:var(--warning)"></i>50–99%</span>' +
+        '<span><i style="background:var(--critical)"></i>menos de 50%</span>' +
+      '</div>';
+
+    // Hover: se engancha a la lectura más cercana en el tiempo.
+    var svg = chartContainer.querySelector("svg");
+    var cursor = svg.querySelector(".cursor");
+    var cursorDot = svg.querySelector(".cursor-dot");
+    var tip = chartContainer.querySelector(".chart-tooltip");
+    function ocultar() {
+      cursor.setAttribute("visibility", "hidden");
+      cursorDot.setAttribute("visibility", "hidden");
+      tip.hidden = true;
+    }
+    function mover(ev) {
+      var r = svg.getBoundingClientRect();
+      var escala = r.width / W;
+      var t = t0 + ((ev.clientX - r.left) / escala - padL) / (W - padL - padR) * (t1 - t0);
+      var lo = 0, hi = puntos.length - 1;
+      while (lo < hi) { var mid = (lo + hi) >> 1; if (puntos[mid].t < t) lo = mid + 1; else hi = mid; }
+      if (lo > 0 && t - puntos[lo - 1].t < puntos[lo].t - t) lo--;
+      var p = puntos[lo];
+      var px = x(p.t), py = y(p.pct);
+      cursor.setAttribute("x1", px); cursor.setAttribute("x2", px);
+      cursor.setAttribute("visibility", "visible");
+      cursorDot.setAttribute("cx", px); cursorDot.setAttribute("cy", py);
+      cursorDot.setAttribute("fill", statusColor(statusBucket(Math.round(p.pct))));
+      cursorDot.setAttribute("visibility", "visible");
+      tip.innerHTML = '<div class="t">' + fmtTime(new Date(p.t).toISOString()) + '</div>' +
+        '<div><span class="v mono">' + (Math.round(p.pct * 10) / 10) + '%</span> <span class="mono">(' + p.ok + '/' + p.total + ')</span></div>';
+      tip.style.left = Math.min(Math.max(px * escala, 70), r.width - 70) + "px";
+      tip.style.top = (py * escala) + "px";
+      tip.hidden = false;
+    }
+    svg.addEventListener("pointermove", mover);
+    svg.addEventListener("pointerleave", ocultar);
   }
 
   function renderEventos(eventos, iv) {

@@ -63,6 +63,7 @@ create table if not exists consultas (
     ok boolean not null,
     accesos smallint,                     -- accesos devueltos por la API
     cambios smallint,                     -- filas agregadas a estado_historial
+    funcionando smallint,                 -- de esos accesos, cuántos funcionaban
     error text                            -- motivo, si ok = false
 );
 

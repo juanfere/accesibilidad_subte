@@ -144,7 +144,8 @@ def registrar(supabase, ahora):
     if cambios:
         supabase.table("estado_historial").insert(cambios).execute()
 
-    return len(accesos), len(cambios)
+    n_funcionando = sum(1 for a in accesos if a["funcionando"])
+    return len(accesos), len(cambios), n_funcionando
 
 
 def main():
@@ -155,7 +156,7 @@ def main():
     ahora = datetime.now(timezone.utc).isoformat()
 
     try:
-        n_accesos, n_cambios = registrar(supabase, ahora)
+        n_accesos, n_cambios, n_funcionando = registrar(supabase, ahora)
     except Exception as e:
         # Queda registrado que se intentó y falló, para no confundir este
         # hueco con "no cambió nada".
@@ -172,6 +173,7 @@ def main():
         "ok": True,
         "accesos": n_accesos,
         "cambios": n_cambios,
+        "funcionando": n_funcionando,
     }).execute()
 
     print(f"[{ahora}] OK - {n_accesos} accesos consultados, {n_cambios} cambios registrados")

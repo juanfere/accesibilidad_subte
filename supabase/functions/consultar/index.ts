@@ -267,6 +267,7 @@ Deno.serve(async (req) => {
         ok: true,
         accesos: accesos.length,
         cambios: cambios.length,
+        funcionando: accesos.filter((a) => a.funcionando).length,
       }),
     });
 
