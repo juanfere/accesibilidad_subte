@@ -156,16 +156,6 @@ Deno.serve(async (req) => {
         c.descripcion_linea !== a.descripcion_linea
       );
     });
-     console.log(
-      "pendientes:",
-      pendientes.length,
-      "ejemplo nuevo:",
-      JSON.stringify(pendientes[0]),
-      "ejemplo guardado:",
-      JSON.stringify(
-        pendientes[0] ? porClave.get(clave(pendientes[0])) : null,
-      ),
-    );
 
     // 3) Escribir solo si hay algo pendiente (casi siempre no hay nada)
     if (pendientes.length > 0) {
