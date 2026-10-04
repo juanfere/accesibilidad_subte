@@ -163,6 +163,12 @@
   }
   .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+  .filtro-global {
+    display: flex; align-items: center; gap: 8px; width: fit-content; max-width: 100%;
+    margin: 0 0 16px; font-size: 0.85rem; color: var(--ink-secondary); cursor: pointer;
+  }
+  .filtro-global input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; flex: none; cursor: pointer; }
+
   .panel { display: none; }
   .panel.active { display: block; }
 
@@ -328,6 +334,11 @@
     <button class="tab" data-tab="mapa" role="tab" aria-selected="false">Mapa</button>
   </nav>
 
+  <label class="filtro-global" title="Saca de todas las vistas (resumen, listas, gráfico y mapa) los accesos fuera de servicio en todas las lecturas de los últimos 7 días.">
+    <input type="checkbox" id="ocultar-cronicos">
+    <span>Ocultar los accesos que no anduvieron en los últimos 7 días<span class="mono" id="ocultar-cronicos-n"></span></span>
+  </label>
+
   <main>
     <section id="panel-actual" class="panel active">
       <div class="card">
@@ -440,7 +451,7 @@
 
   function fmtTime(iso) {
     var d = new Date(iso);
-    return d.toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+    return d.toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
   }
 
   function escapeHtml(s) {
@@ -477,7 +488,7 @@
         setInterval_(currentIntervalKey);
       }
       if (btn.dataset.tab === "mapa" && window.__estadoRows) {
-        renderMapa(window.__estadoRows);
+        renderMapa(filasVisibles());
       }
     });
   });
@@ -551,6 +562,48 @@
       new Date(r.ultima_consulta) >= hoy &&
       (r.ultima_vez_funcionando === null || new Date(r.ultima_vez_funcionando) < hoy);
   }
+
+  /* Fuera de servicio en todas las lecturas de los últimos 7 días. Si
+     medimos hace menos de 7 días, alcanza con que no haya andado nunca. */
+  var SIETE_DIAS_MS = 7 * 24 * 3600e3;
+  function noAnduvoEn7Dias(r) {
+    return !r.funcionando &&
+      (r.ultima_vez_funcionando === null ||
+        Date.now() - new Date(r.ultima_vez_funcionando).getTime() > SIETE_DIAS_MS);
+  }
+
+  var ocultarCronicos = false;
+
+  function accesoKey(r) { return r.linea + "|" + r.estacion + "|" + r.nombre; }
+
+  /* Accesos que el checkbox "ocultar" saca de todas las vistas. */
+  function filasOcultas() {
+    return ocultarCronicos ? (window.__estadoRows || []).filter(noAnduvoEn7Dias) : [];
+  }
+
+  function filasVisibles() {
+    var rows = window.__estadoRows || [];
+    return ocultarCronicos ? rows.filter(function (r) { return !noAnduvoEn7Dias(r); }) : rows;
+  }
+
+  function renderEstado() {
+    var rows = filasVisibles();
+    renderSummary(rows);
+    renderLecturas();
+    renderVistas(rows);
+    renderProblemas(rows);
+    renderLineas(rows);
+    if (document.querySelector('.tab[data-tab="mapa"]').getAttribute("aria-selected") === "true") {
+      renderMapa(rows);
+    }
+  }
+
+  document.getElementById("ocultar-cronicos").addEventListener("change", function (ev) {
+    ocultarCronicos = ev.target.checked;
+    if (!window.__estadoRows) return;
+    renderEstado();
+    if (window.__historicoLoaded) setInterval_(currentIntervalKey);
+  });
 
   /* Cuánto lleva en el estado actual y cuántas lecturas lo confirman.
      Si no hay lectura previa al cambio (cambio_desde vacío), el acceso está
@@ -730,7 +783,9 @@
 
     try {
       var eventos = await supaGet(query);
-      renderEventos(eventos, iv);
+      var ocultas = {};
+      filasOcultas().forEach(function (r) { ocultas[accesoKey(r)] = true; });
+      renderEventos(eventos.filter(function (e) { return !ocultas[accesoKey(e)]; }), iv);
     } catch (err) {
       container.innerHTML = '<div class="error-banner">No se pudo cargar el histórico: ' + escapeHtml(err.message) + '</div>';
     }
@@ -768,9 +823,20 @@
     }
     if (seq !== chartSeq) return;  // se eligió otro rango mientras cargaba
 
-    var puntos = lecturas.filter(function (l) { return l.accesos > 0; }).map(function (l) {
-      return { t: new Date(l.timestamp).getTime(), pct: (l.funcionando / l.accesos) * 100, ok: l.funcionando, total: l.accesos };
+    // Los accesos ocultos se descuentan del total de cada lectura desde la
+    // última vez que anduvieron: de ahí en más estuvieron siempre caídos,
+    // así que la cantidad funcionando no cambia.
+    var ocultas = filasOcultas().map(function (r) {
+      return {
+        desde: new Date(r.primera_consulta).getTime(),
+        anduvo: r.ultima_vez_funcionando === null ? -Infinity : new Date(r.ultima_vez_funcionando).getTime()
+      };
     });
+    var puntos = lecturas.map(function (l) {
+      var t = new Date(l.timestamp).getTime();
+      var total = l.accesos - ocultas.filter(function (o) { return o.desde <= t && o.anduvo < t; }).length;
+      return { t: t, pct: (l.funcionando / total) * 100, ok: l.funcionando, total: total };
+    }).filter(function (p) { return p.total > 0; });
     if (puntos.length === 0) {
       chartContainer.innerHTML = '<div class="empty-state">Sin lecturas en este rango.</div>';
       return;
@@ -811,17 +877,33 @@
       return '<circle cx="' + x(p.t).toFixed(1) + '" cy="' + y(p.pct).toFixed(1) + '" r="3.5" fill="' + statusColor(statusBucket(Math.round(p.pct))) + '" stroke="var(--surface)" stroke-width="1.5"/>';
     }).join("") : "";
 
-    var porDia = (t1 - t0) > 2 * 24 * 3600e3;
+    // Marcas del eje X: el paso "redondo" más chico que deja 12 o menos, en
+    // hora local. Arriba de 1 hora de rango siempre caen en horas en punto;
+    // la marca de las 00:00 muestra la fecha en vez de la hora.
+    var MIN = 60e3, HORA = 3600e3, DIA = 24 * HORA;
+    var paso = [5 * MIN, 10 * MIN, 15 * MIN, 30 * MIN, HORA, 2 * HORA, 3 * HORA, 6 * HORA, 12 * HORA,
+      DIA, 2 * DIA, 3 * DIA, 5 * DIA, 7 * DIA, 14 * DIA, 30 * DIA, 60 * DIA, 90 * DIA, 180 * DIA, 365 * DIA]
+      .filter(function (p) { return (p >= HORA || t1 - t0 <= HORA) && (t1 - t0) / p <= 12; })[0] || 365 * DIA;
+    var marcas = [];
+    var m = new Date(t0);
+    m.setHours(0, 0, 0, 0);
+    while (m.getTime() <= t1) {
+      if (m.getTime() >= t0) marcas.push(m.getTime());
+      if (paso >= DIA) m.setDate(m.getDate() + paso / DIA);
+      else m = new Date(m.getTime() + paso);
+    }
+    function dos(n) { return (n < 10 ? "0" : "") + n; }
     function fmtEje(t) {
       var d = new Date(t);
-      return porDia
-        ? d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit" })
-        : d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+      return (paso >= DIA || (d.getHours() === 0 && d.getMinutes() === 0))
+        ? dos(d.getDate()) + "/" + dos(d.getMonth() + 1)
+        : dos(d.getHours()) + ":" + dos(d.getMinutes());
     }
-    var xLabels =
-      '<text x="' + padL + '" y="' + (H - 6) + '"' + mono + '>' + fmtEje(t0) + '</text>' +
-      '<text x="' + ((padL + W - padR) / 2) + '" y="' + (H - 6) + '" text-anchor="middle"' + mono + '>' + fmtEje((t0 + t1) / 2) + '</text>' +
-      '<text x="' + (W - padR) + '" y="' + (H - 6) + '" text-anchor="end"' + mono + '>' + fmtEje(t1) + '</text>';
+    var xLabels = marcas.map(function (t) {
+      var px = x(t);
+      return '<line x1="' + px.toFixed(1) + '" x2="' + px.toFixed(1) + '" y1="' + y(0) + '" y2="' + (y(0) + 4) + '" stroke="var(--ink-muted)" stroke-width="1"/>' +
+        '<text x="' + px.toFixed(1) + '" y="' + (H - 6) + '" text-anchor="' + (px > W - 20 ? "end" : "middle") + '"' + mono + '>' + fmtEje(t) + '</text>';
+    }).join("");
 
     chartContainer.innerHTML =
       '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Porcentaje de accesos funcionando en cada lectura">' +
@@ -1033,14 +1115,8 @@
       await forzarActualizacion();
       var rows = await supaGet("estado_actual_legible?select=*&order=linea.asc,estacion.asc,nombre.asc");
       window.__estadoRows = rows;
-      renderSummary(rows);
-      renderLecturas();
-      renderVistas(rows);
-      renderProblemas(rows);
-      renderLineas(rows);
-      if (document.querySelector('.tab[data-tab="mapa"]').getAttribute("aria-selected") === "true") {
-        renderMapa(rows);
-      }
+      document.getElementById("ocultar-cronicos-n").textContent = " (" + rows.filter(noAnduvoEn7Dias).length + ")";
+      renderEstado();
     } catch (err) {
       document.getElementById("problemas-container").innerHTML = '<div class="error-banner">No se pudo conectar con la base: ' + escapeHtml(err.message) + '</div>';
       document.getElementById("lineas-container").innerHTML = "";
