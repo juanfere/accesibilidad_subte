@@ -22,7 +22,7 @@ estado de esos equipos **en ese momento**, pero:
 - **no es fácil de mirar**: son datos pensados para computadoras, no para
   personas.
 
-Este proyecto **consulta esa información cada 2 minutos, la guarda y arma un
+Este proyecto **consulta esa información cada 5 minutos, la guarda y arma un
 historial**, y la muestra en una página web con listados, gráficos y un mapa.
 
 ---
@@ -32,7 +32,7 @@ historial**, y la muestra en una página web con listados, gráficos y un mapa.
 ```mermaid
 flowchart LR
     A["🚇 EMOVA<br/>publica el estado<br/>de ascensores y escaleras"]
-    B["🤖 Robot automático<br/>pregunta cada 2 minutos"]
+    B["🤖 Robot automático<br/>pregunta cada 5 minutos"]
     C["🗄️ Base de datos<br/>guarda el estado actual<br/>y todos los cambios"]
     D["🌐 Página web<br/>muestra listados,<br/>gráficos y mapa"]
     E["👥 Personas<br/>consultan desde el<br/>celular o la compu"]
@@ -48,7 +48,7 @@ Son cuatro piezas:
 | Pieza | Qué es, en criollo | Servicio que se usa | ¿Cuesta plata? |
 |---|---|---|---|
 | **Fuente de datos** | La "ventanilla" pública donde EMOVA informa el estado de cada ascensor y escalera | API pública de EMOVA / Metrovías | No |
-| **Robot recolector** | Un programa que se despierta solo cada 2 minutos, pregunta y anota | Supabase (tarea programada + función) | No |
+| **Robot recolector** | Un programa que se despierta solo cada 5 minutos, pregunta y anota | Supabase (tarea programada + función) | No |
 | **Base de datos** | La "libreta" donde queda todo guardado | Supabase | No (plan gratuito) |
 | **Página web** | El tablero que ve la gente | GitHub Pages + OpenStreetMap para el mapa | No |
 
@@ -73,7 +73,7 @@ No hace falta usuario ni contraseña: es información pública.
 El robot vive en el mismo servicio donde se guardan los datos, Supabase, y
 tiene dos partes:
 
-- un **despertador**: una tarea programada que suena **cada 2 minutos**;
+- un **despertador**: una tarea programada que suena **cada 5 minutos**;
 - una **función**: un pequeño programa que, cuando suena el despertador,
   le pregunta a EMOVA cómo están los equipos y anota lo que cambió.
 
@@ -102,7 +102,7 @@ mundial libre y colaborativo.
 
 ---
 
-## 4. ¿Qué pasa cada 2 minutos?
+## 4. ¿Qué pasa cada 5 minutos?
 
 ```mermaid
 sequenceDiagram
@@ -111,7 +111,7 @@ sequenceDiagram
     participant E as 🚇 EMOVA
     participant S as 🗄️ Base de datos (Supabase)
 
-    Note over R: Suena el despertador (cada 2 min)
+    Note over R: Suena el despertador (cada 5 min)
     R->>E: ¿Cómo están todos los ascensores y escaleras?
     E-->>R: Lista completa: ~424 equipos con su estado
     R->>S: ¿Cómo estaban la última vez que pregunté?
@@ -133,9 +133,9 @@ Todo el ciclo tarda unos pocos segundos.
 ## 5. La idea clave: anotar solo los cambios
 
 Una forma ingenua sería guardar una "foto" completa de los 424 equipos cada
-2 minutos. Eso son más de **300.000 anotaciones por día**, casi todas
+5 minutos. Eso son más de **120.000 anotaciones por día**, casi todas
 repetidas ("sigue funcionando", "sigue funcionando"…). El espacio gratuito se
-llenaría en pocos días.
+llenaría en pocas semanas.
 
 En cambio, el proyecto hace lo que haría una persona prolija con una
 libreta: **solo escribe cuando algo cambia**.
@@ -231,7 +231,7 @@ flowchart LR
     end
 
     subgraph Supabase["Supabase (plan gratuito)"]
-        CRON["⏰ Despertador<br/>cada 2 min"]
+        CRON["⏰ Despertador<br/>cada 5 min"]
         FN["🤖 Función recolectora"]
         DB[("🗄️ Base de datos<br/>catálogo · estado actual · historial")]
     end
@@ -264,7 +264,7 @@ modifica: solo los guarda y los ordena. Si EMOVA informa algo incorrecto, acá
 se va a ver igual.
 
 **¿Qué tan actualizados están?**
-Se consultan cada 2 minutos y, además, cada vez que alguien abre la página se
+Se consultan cada 5 minutos y, además, cada vez que alguien abre la página se
 intenta hacer una consulta en el momento.
 
 **¿Puede alguien alterar los datos?**
@@ -272,7 +272,7 @@ No. Leer es público, pero escribir requiere una llave secreta que solo tiene
 el robot recolector.
 
 **¿Qué pasa si EMOVA se cae un rato?**
-Esa consulta falla y no se anota nada; en la siguiente (2 minutos después)
+Esa consulta falla y no se anota nada; en la siguiente (5 minutos después)
 se retoma normalmente. La página sigue mostrando el último estado conocido.
 
 **¿Cuánto cuesta mantenerlo?**

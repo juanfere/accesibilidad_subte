@@ -269,7 +269,7 @@
       <a href="#problema">El problema</a>
       <a href="#idea">La idea</a>
       <a href="#servicios">Servicios</a>
-      <a href="#ciclo">Cada 2 minutos</a>
+      <a href="#ciclo">Cada 5 minutos</a>
       <a href="#cambios">Solo los cambios</a>
       <a href="#datos">Los datos</a>
       <a href="#web">La página</a>
@@ -287,7 +287,7 @@
       <li><strong>no es fácil de mirar:</strong> son datos pensados para computadoras, no para personas.</li>
     </ul>
     <div class="callout">
-      <p>Este proyecto <strong>consulta esa información cada 2 minutos, la guarda y arma un historial</strong>, y la muestra en una página web con listados, gráficos y un mapa.</p>
+      <p>Este proyecto <strong>consulta esa información cada 5 minutos, la guarda y arma un historial</strong>, y la muestra en una página web con listados, gráficos y un mapa.</p>
     </div>
   </section>
 
@@ -295,7 +295,7 @@
     <h2><span class="num">02</span>La idea en una imagen</h2>
     <ol class="flujo">
       <li><span class="icon">🚇</span><span class="name">EMOVA</span><span class="what">publica el estado de ascensores y escaleras</span></li>
-      <li><span class="icon">🤖</span><span class="name">Robot</span><span class="what">pregunta cada 2 minutos y anota lo que cambió</span></li>
+      <li><span class="icon">🤖</span><span class="name">Robot</span><span class="what">pregunta cada 5 minutos y anota lo que cambió</span></li>
       <li><span class="icon">🗄️</span><span class="name">Base de datos</span><span class="what">guarda el estado actual y todos los cambios</span></li>
       <li><span class="icon">🌐</span><span class="name">Página web</span><span class="what">muestra listados, gráficos y mapa</span></li>
       <li><span class="icon">👥</span><span class="name">Personas</span><span class="what">consultan desde el celular o la compu</span></li>
@@ -312,7 +312,7 @@
       <div class="piece">
         <div class="icon">🤖</div>
         <div class="name">Robot recolector</div>
-        <div class="what">Un programa que se despierta solo cada 2 minutos, pregunta y anota.</div>
+        <div class="what">Un programa que se despierta solo cada 5 minutos, pregunta y anota.</div>
         <div class="svc">Supabase</div>
         <span class="badge">Gratis</span>
       </div>
@@ -340,7 +340,7 @@
     <p>EMOVA tiene una dirección web pública que responde con la lista completa de <strong>líneas → estaciones → equipos</strong> y dice, para cada uno, si <strong>funciona o no</strong>. Hoy son <strong>unos 424 equipos</strong> en las líneas A, B, C, D, E y H. No hace falta usuario ni contraseña: es información pública.</p>
 
     <h3>🤖 El robot con despertador, dentro de Supabase</h3>
-    <p>El robot vive en el mismo servicio donde se guardan los datos, Supabase, y tiene dos partes: un <strong>despertador</strong>, una tarea programada que suena <strong>cada 2 minutos</strong>, y una <strong>función</strong>, un pequeño programa que en ese momento le pregunta a EMOVA cómo están los equipos y anota lo que cambió. Como todo pasa dentro de Supabase, no hace falta ninguna otra computadora ni servicio.</p>
+    <p>El robot vive en el mismo servicio donde se guardan los datos, Supabase, y tiene dos partes: un <strong>despertador</strong>, una tarea programada que suena <strong>cada 5 minutos</strong>, y una <strong>función</strong>, un pequeño programa que en ese momento le pregunta a EMOVA cómo están los equipos y anota lo que cambió. Como todo pasa dentro de Supabase, no hace falta ninguna otra computadora ni servicio.</p>
     <p class="muted">Además, la página web también “despierta” a la función cada vez que alguien entra, para mostrar datos lo más frescos posible.</p>
 
     <h3>🗄️ Supabase, la libreta</h3>
@@ -351,14 +351,14 @@
   </section>
 
   <section class="card" id="ciclo">
-    <h2><span class="num">04</span>¿Qué pasa cada 2 minutos?</h2>
+    <h2><span class="num">04</span>¿Qué pasa cada 5 minutos?</h2>
     <div class="diagram"><pre class="mermaid">
 sequenceDiagram
     autonumber
     participant R as 🤖 Robot (Supabase)
     participant E as 🚇 EMOVA
     participant S as 🗄️ Base de datos
-    Note over R: Suena el despertador (cada 2 min)
+    Note over R: Suena el despertador (cada 5 min)
     R->>E: ¿Cómo están todos los equipos?
     E-->>R: Lista completa (~424 equipos)
     R->>S: ¿Cómo estaban la última vez?
@@ -377,7 +377,7 @@ sequenceDiagram
 
   <section class="card" id="cambios">
     <h2><span class="num">05</span>La idea clave: anotar solo los cambios</h2>
-    <p>Guardar una “foto” completa de los 424 equipos cada 2 minutos serían más de <strong>300.000 anotaciones por día</strong>, casi todas repetidas (“sigue funcionando”, “sigue funcionando”…). El espacio gratuito se llenaría en pocos días.</p>
+    <p>Guardar una “foto” completa de los 424 equipos cada 5 minutos serían más de <strong>120.000 anotaciones por día</strong>, casi todas repetidas (“sigue funcionando”, “sigue funcionando”…). El espacio gratuito se llenaría en pocas semanas.</p>
     <p>En cambio, el proyecto hace lo que haría una persona prolija con una libreta: <strong>solo escribe cuando algo cambia</strong>.</p>
     <div class="diagram"><pre class="mermaid">
 flowchart TD
@@ -439,7 +439,7 @@ flowchart TB
     GP["🌐 Página web<br/>(GitHub Pages)"]
     OSM["🗺️ Mapa de fondo<br/>(OpenStreetMap)"]
     subgraph supa["Supabase · plan gratuito"]
-        CRON["⏰ Despertador<br/>cada 2 min"]
+        CRON["⏰ Despertador<br/>cada 5 min"]
         FN["🤖 Función recolectora"]
         DB[("🗄️ Base de datos")]
     end
@@ -459,11 +459,11 @@ flowchart TB
     <details><summary>¿Los datos son oficiales?</summary>
       <p>Vienen de la información pública de EMOVA. El proyecto no los modifica: solo los guarda y los ordena. Si EMOVA informa algo incorrecto, acá se va a ver igual.</p></details>
     <details><summary>¿Qué tan actualizados están?</summary>
-      <p>Se consultan cada 2 minutos y, además, cada vez que alguien abre la página se intenta hacer una consulta en el momento.</p></details>
+      <p>Se consultan cada 5 minutos y, además, cada vez que alguien abre la página se intenta hacer una consulta en el momento.</p></details>
     <details><summary>¿Puede alguien alterar los datos?</summary>
       <p>No. Leer es público, pero escribir requiere una llave secreta que solo tiene el robot recolector.</p></details>
     <details><summary>¿Qué pasa si EMOVA se cae un rato?</summary>
-      <p>Esa consulta falla y no se anota nada; en la siguiente, 2 minutos después, se retoma normalmente. La página sigue mostrando el último estado conocido.</p></details>
+      <p>Esa consulta falla y no se anota nada; en la siguiente, 5 minutos después, se retoma normalmente. La página sigue mostrando el último estado conocido.</p></details>
     <details><summary>¿Cuánto cuesta mantenerlo?</summary>
       <p>Nada: Supabase y GitHub se usan dentro de sus planes gratuitos. Se estima que el espacio gratuito alcanza para cerca de 20 meses de historial.</p></details>
     <details><summary>¿Se guarda algo de quienes visitan la página?</summary>

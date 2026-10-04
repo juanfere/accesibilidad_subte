@@ -7,7 +7,7 @@ tener una compu prendida corriendo un loop.
 ## Modelo de datos
 
 En vez de guardar un snapshot completo en cada consulta (crecería muy rápido:
-~424 accesos x cada 2 min = pasaría los 500MB gratis de Supabase en días),
+~424 accesos x cada 5 min = pasaría los 500MB gratis de Supabase en semanas),
 se guarda:
 
 - `accesos`: dimensión con el catálogo de accesos físicos (línea, estación,
@@ -74,7 +74,7 @@ python migrar_csv.py
 
 ### 4. Programar la consulta periódica (Edge Function + pg_cron)
 
-La consulta cada 2 min **no** corre más como cron de GitHub Actions: en
+La consulta cada 5 min **no** corre más como cron de GitHub Actions: en
 runners compartidos el evento `schedule` puede demorarse bien por encima
 del intervalo pedido, o directamente saltearse ejecuciones (le pasaba a
 este proyecto). En su lugar, la misma lógica de `descargar.py` vive como
@@ -108,7 +108,7 @@ quedó solo para correr `descargar.py` a mano si hace falta debuggear.
    contenido de `supabase/sql/cron_consultar.sql`, reemplazar los dos
    placeholders (`SUPABASE_URL` y la `anon` key — los mismos valores que ya
    están hardcodeados en `docs/index.html`) y ejecutar. Corre una sola vez;
-   a partir de ahí `pg_cron` invoca la función cada 2 minutos solo.
+   a partir de ahí `pg_cron` invoca la función cada 5 minutos solo.
 4. **Verificar que quedó corriendo**: `select * from cron.job;` para ver el
    job programado, o `select * from cron.job_run_details order by
    start_time desc limit 20;` para ver las últimas ejecuciones.

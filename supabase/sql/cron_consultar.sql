@@ -1,10 +1,10 @@
 -- Programa la Edge Function `consultar` (supabase/functions/consultar) para
--- correr cada 2 minutos usando pg_cron + pg_net, en vez de depender del
+-- correr cada 5 minutos usando pg_cron + pg_net, en vez de depender del
 -- cron de GitHub Actions (poco confiable en runners compartidos: los
 -- eventos `schedule` pueden demorarse bien por encima del intervalo
 -- pedido, o directamente saltearse ejecuciones).
 --
--- A 2': ~21.600 invocaciones/mes (500.000 incluidas en el free tier de
+-- A 5': ~8.640 invocaciones/mes (500.000 incluidas en el free tier de
 -- Supabase) y bien por debajo del egress incluido (5GB/mes) — el límite
 -- real, si existe, está del lado de la API de EMOVA (no nuestra), no de
 -- Supabase.
@@ -25,7 +25,7 @@ create extension if not exists pg_net with schema extensions;
 
 select cron.schedule(
   'consultar-accesibilidad-subte',
-  '*/2 * * * *',
+  '*/5 * * * *',
   $$
   select net.http_post(
     url := 'https://xxxxxxxxxxxx.supabase.co/functions/v1/consultar',

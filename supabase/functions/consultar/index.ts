@@ -1,7 +1,7 @@
 // Reemplaza a descargar.py: consulta la API de accesibilidad de EMOVA y
 // guarda el resultado en Supabase.
 //
-// Pensada para correr disparada por pg_cron cada 2 minutos (ver
+// Pensada para correr disparada por pg_cron cada 5 minutos (ver
 // supabase/sql/cron_consultar.sql), en vez del cron de GitHub Actions, que
 // en runners compartidos puede demorarse bien por encima del intervalo
 // pedido.
