@@ -360,7 +360,7 @@ estaciones:
          duda: "La API dice solo 'Entrepiso'; asumimos el del lado Roosevelt, que es el que está abierto."}
       - {equipo: "A4", medio: ascensor, entre: [entrepiso_oeste, hall_oeste],
          texto: "Ascensor N°4: Entrepiso - Vestíbulo",
-         duda: "Ídem A6."}
+         duda: "Ídem Ascensor N°6."}
       - {equipo: "A2", medio: ascensor, entre: [hall_oeste, salida_roosevelt_5109],
          texto: "Ascensor N°2: Vestíbulo - Franklin D. Roosevelt 5109"}
       - {equipo: "E9", medio: escalera_mecanica, desde: anden, hasta: entrepiso_oeste,

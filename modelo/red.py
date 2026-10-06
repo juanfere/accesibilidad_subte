@@ -15,6 +15,7 @@ Uso:
 """
 
 import json
+import re
 import sys
 from collections import deque
 from itertools import permutations
@@ -40,6 +41,25 @@ def cargar():
         for e in l["estaciones"]:
             validar(l["linea"], e)
     return lineas
+
+
+NOMBRES = {"ascensor": "Ascensor", "salvaescaleras": "Salvaescaleras",
+           "escalera_mecanica": "Escalera", "camino_rodante": "Camino rodante"}
+
+
+def nombre_equipo(conexion):
+    """Nombre del equipo como lo escribe EMOVA en su texto ("Escalera N°10").
+
+    Es el número que está señalizado en la estación. El código de la API
+    ("E11") es interno y muchas veces no coincide con ese número.
+    """
+    texto = conexion["texto"]
+    m = (re.match(r"\s*([^:]{1,28}?)\s*:", texto)
+         or re.match(r"\s*((?:Ascensor|Escalera|Salvaescaleras?|Camino rodante)\s+(?:N°\s*)?[\w.]+)", texto))
+    nombre = " ".join(m.group(1).split()).replace("N° ", "N°") if m else conexion["equipo"]
+    if not re.match(r"(?i)ascensor|escalera|salvaescalera|camino", nombre):
+        nombre = f"{NOMBRES.get(conexion.get('medio'), 'Equipo')} {nombre}"
+    return nombre
 
 
 def extremos(conexion):
@@ -85,7 +105,8 @@ class Red:
             for c in e["conexiones"]:
                 if c["medio"] not in PERFILES[perfil] or c["equipo"] in caidos:
                     continue
-                paso = {"linea": linea, "estacion": nombre, "equipo": c["equipo"], "medio": c["medio"]}
+                paso = {"linea": linea, "estacion": nombre, "equipo": c["equipo"], "medio": c["medio"],
+                        "nombre": nombre_equipo(c)}
                 tramos = permutations(c["entre"], 2) if "entre" in c else [(c["desde"], c["hasta"])]
                 for a, b in tramos:
                     grafo.setdefault(self.nodo(linea, nombre, a), []).append((self.nodo(linea, nombre, b), paso))
@@ -157,7 +178,7 @@ def situacion(estacion, accesos):
 def describir(resultado):
     if resultado is None:
         return "NO HAY CAMINO"
-    equipos = " + ".join(f"{p['medio'].replace('_', ' ')} {p['equipo']}" for p in resultado["pasos"])
+    equipos = " + ".join(p["nombre"] for p in resultado["pasos"])
     por = f"  (por {resultado['por']['estacion']}, Línea {resultado['por']['linea']})" if resultado["por"] else ""
     return f"{equipos}  ·  {resultado['calle']}{por}"
 
@@ -173,7 +194,7 @@ def reporte(linea=None, en_vivo=False):
             caidos = estado.get((l["linea"], e.get("nombre_api", e["nombre"])), set())
             dudas = len(e.get("dudas", [])) + sum(1 for c in e["conexiones"] if "duda" in c)
             print(f"\n{e['nombre']}" + (f"   [{dudas} dudas a revisar]" if dudas else "")
-                  + (f"   [fuera de servicio: {', '.join(sorted(caidos))}]" if caidos else ""))
+                  + (f"   [fuera de servicio: {', '.join(nombre_equipo(c) for c in e['conexiones'] if c['equipo'] in caidos)}]" if caidos else ""))
             for perfil in PERFILES:
                 print(f"  {perfil}")
                 for anden, r in red.accesos(l["linea"], e["nombre"], perfil, estado).items():
@@ -195,8 +216,8 @@ def exportar(ruta):
                 "categoria_oficial": e["categoria_oficial"],
                 "dudas": e.get("dudas", []),
                 "lugares": e["lugares"],
-                "conexiones": e["conexiones"],
-                "sin_ubicar": e.get("sin_ubicar", []),
+                "conexiones": [{**c, "nombre": nombre_equipo(c)} for c in e["conexiones"]],
+                "sin_ubicar": [{**c, "nombre": nombre_equipo(c)} for c in e.get("sin_ubicar", [])],
                 "accesos": accesos,
                 "situacion": {p: situacion(e, a) for p, a in accesos.items()},
             })

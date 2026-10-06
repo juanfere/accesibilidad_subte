@@ -35,8 +35,10 @@ Cada estación se describe con dos listas:
   - Ascensor y salvaescaleras: se usan en los dos sentidos.
   - Escalera mecánica y camino rodante: en un solo sentido.
 
-Cada conexión lleva el código que el equipo tiene en EMOVA. Eso permite
-cruzar el modelo con el estado en vivo que ya juntamos.
+Cada equipo se nombra como figura en el texto de EMOVA y en la señalización
+de la estación ("Ascensor N°2"). El modelo guarda además el código interno
+que EMOVA le da a cada uno, que no siempre coincide con ese número, porque es
+lo que permite cruzarlo con el estado en vivo que ya juntamos.
 
 ```mermaid
 flowchart LR
@@ -45,15 +47,15 @@ flowchart LR
     V["Vestíbulo"]
     C1["Calle<br/>Av. Jujuy 2179"]
     C2["Calle<br/>Av. Jujuy 2110"]
-    AF <-- "ascensor A2" --> V
-    AH <-- "ascensor A3" --> V
-    V <-- "ascensor A1" --> C1
-    AF -- "escalera E1" --> V
-    AH -- "escalera E2" --> V
-    V -- "escalera E3" --> C2
+    AF <-- "Ascensor N°1" --> V
+    AH <-- "Ascensor N°2" --> V
+    V <-- "Ascensor N°3" --> C1
+    AF -- "Escalera N°1" --> V
+    AH -- "Escalera N°2" --> V
+    V -- "Escalera N°3" --> C2
 ```
 
-*Ejemplo: estación Caseros (Línea H). Si el ascensor A3 no funciona, quien
+*Ejemplo: estación Caseros (Línea H). Si el Ascensor N°2 no funciona, quien
 llega en el andén a Hospitales en silla de ruedas no puede salir.*
 
 ### Los andenes
@@ -150,7 +152,7 @@ Ejemplo de lo que responde el programa:
 Las Heras
   silla_de_ruedas
     andén a Facultad de Derecho
-      salir:  ascensor A4 + ascensor A2 + ascensor A1  ·  Av. Pueyrredón 2001 (y Av. Las Heras)
+      salir:  Ascensor N°4 + Ascensor N°2 + Ascensor N°1  ·  Av. Pueyrredón 2001 (y Av. Las Heras)
 ```
 
 ### Resultado para toda la red (si todos los equipos funcionaran)

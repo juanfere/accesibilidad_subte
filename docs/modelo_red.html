@@ -338,15 +338,15 @@ flowchart LR
     V["Vestíbulo"]
     C1["🏙️ Calle<br/>Av. Jujuy 2179"]
     C2["🏙️ Calle<br/>Av. Jujuy 2110"]
-    AF <-- "ascensor A2" --> V
-    AH <-- "ascensor A3" --> V
-    V <-- "ascensor A1" --> C1
-    AF -- "escalera E1" --> V
-    AH -- "escalera E2" --> V
-    V -- "escalera E3" --> C2
+    AF <-- "Ascensor N°1" --> V
+    AH <-- "Ascensor N°2" --> V
+    V <-- "Ascensor N°3" --> C1
+    AF -- "Escalera N°1" --> V
+    AH -- "Escalera N°2" --> V
+    V -- "Escalera N°3" --> C2
     </pre></div>
-    <p class="diagram-caption">Estación Caseros (Línea H). Si el ascensor A3 no funciona, quien llega en silla de ruedas al andén a Hospitales no puede salir.</p>
-    <p>Cada conexión lleva el código que el equipo tiene en EMOVA (A1, E3…). Eso es lo que permite cruzar el mapa con el estado en vivo.</p>
+    <p class="diagram-caption">Estación Caseros (Línea H). Si el Ascensor N°2 no funciona, quien llega en silla de ruedas al andén a Hospitales no puede salir.</p>
+    <p>Cada equipo se nombra como figura en el texto de EMOVA y en la señalización de la estación (“Ascensor N°2”). El mapa guarda además el código interno que EMOVA le da a cada uno, que no siempre coincide con ese número, porque es lo que permite cruzarlo con el estado en vivo.</p>
 
     <h3>Se trabaja por andén, no por estación</h3>
     <div class="tablas">
@@ -382,17 +382,17 @@ flowchart LR
 <pre class="salida">Las Heras
   silla de ruedas
     andén a Facultad de Derecho
-      salir:  <span class="ok">ascensor A4 + ascensor A2 + ascensor A1</span>  ·  Av. Pueyrredón 2001
-      entrar: <span class="ok">ascensor A1 + ascensor A2 + ascensor A4</span>  ·  Av. Pueyrredón 2001</pre>
+      salir:  <span class="ok">Ascensor N°4 + Ascensor N°2 + Ascensor N°1</span>  ·  Av. Pueyrredón 2001
+      entrar: <span class="ok">Ascensor N°1 + Ascensor N°2 + Ascensor N°4</span>  ·  Av. Pueyrredón 2001</pre>
     <p>Y así cuando un equipo necesario está roto:</p>
-<pre class="salida">Caseros   <span class="gris">[fuera de servicio: A3]</span>
+<pre class="salida">Caseros   <span class="gris">[fuera de servicio: Ascensor N°2]</span>
   silla de ruedas
     andén a Facultad de Derecho
-      salir:  <span class="ok">ascensor A2 + ascensor A1</span>  ·  Av. Jujuy 2179
+      salir:  <span class="ok">Ascensor N°1 + Ascensor N°3</span>  ·  Av. Jujuy 2179
     andén a Hospitales
       salir:  <span class="mal">NO HAY CAMINO</span></pre>
     <div class="callout">
-      <p><strong>En resumen:</strong> el dashboard dice “el ascensor A3 de Caseros no funciona”. El programa traduce eso a lo que le importa a la persona: “hoy no podés bajarte en Caseros si venís desde Facultad de Derecho”.</p>
+      <p><strong>En resumen:</strong> el dashboard dice “el Ascensor N°2 de Caseros no funciona”. El programa traduce eso a lo que le importa a la persona: “hoy no podés bajarte en Caseros si venís desde Facultad de Derecho”.</p>
     </div>
     <p class="muted">Lo que el programa calcula para cada estación, suponiendo que todo funciona, se puede recorrer en <a href="red.html">el mapa de la red</a>. Todavía no calcula viajes entre estaciones.</p>
   </section>
@@ -403,9 +403,9 @@ flowchart LR
     <div class="tabla-wrap"><table>
       <thead><tr><th>Estación</th><th>Situación</th><th>Por qué</th></tr></thead>
       <tbody>
-        <tr><td>Humberto 1°</td><td><span class="estado mal">Sin acceso</span></td><td>Ascensores A2 y A3 fuera de servicio: no se llega a ningún andén.</td></tr>
-        <tr><td>Parque Patricios</td><td><span class="estado mal">Sin acceso</span></td><td>Ascensores A1 y A3 fuera de servicio.</td></tr>
-        <tr><td>Caseros</td><td><span class="estado mal">Acceso parcial</span></td><td>Ascensor A3 fuera de servicio: no se puede usar el andén a Hospitales.</td></tr>
+        <tr><td>Humberto 1°</td><td><span class="estado mal">Sin acceso</span></td><td>Ascensores N°2 y N°3 fuera de servicio: no se llega a ningún andén.</td></tr>
+        <tr><td>Parque Patricios</td><td><span class="estado mal">Sin acceso</span></td><td>Ascensores N°1 y N°3 fuera de servicio.</td></tr>
+        <tr><td>Caseros</td><td><span class="estado mal">Acceso parcial</span></td><td>Ascensor N°2 fuera de servicio: no se puede usar el andén a Hospitales.</td></tr>
         <tr><td>Inclán</td><td><span class="estado duda">Dudoso</span></td><td>Según los textos no hay camino, pero es una duda del mapa y no un dato (ver “A revisar”).</td></tr>
         <tr><td>Las otras 8</td><td><span class="estado ok">Con acceso</span></td><td>Hay camino en todos los andenes.</td></tr>
       </tbody>

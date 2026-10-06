@@ -211,4 +211,4 @@ estaciones:
          duda: "La API dice solo 'Andén'; no sabemos de cuál sale."}
       - {equipo: "E2", medio: escalera_mecanica, desde: anden_2, hasta: centro_trasbordo,
          texto: "Escalera N°2: Andén - Hall Centro de Trasbordo",
-         duda: "Ídem E1."}
+         duda: "Ídem Escalera N°1."}

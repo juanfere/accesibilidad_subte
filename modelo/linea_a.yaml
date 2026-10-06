@@ -263,7 +263,7 @@ estaciones:
          duda: "La API no dice a qué andén va; se dedujo del campo 'cabecera'."}
       - {equipo: "A3", medio: ascensor, entre: [anden_plaza_de_mayo, vestibulo],
          texto: "Ascensor N°3: Andén - vestíbulo",
-         duda: "Ídem A2."}
+         duda: "Ídem Ascensor N°2."}
       - {equipo: "E1", medio: escalera_mecanica, desde: vestibulo, hasta: salida_escalera,
          texto: "Escalera N°1(ext): Hall Boletería – Superficie (Av. Rivadavia 5896)"}
       - {equipo: "E2", medio: escalera_mecanica, desde: anden_san_pedrito, hasta: vestibulo,
@@ -288,7 +288,7 @@ estaciones:
          duda: "La API no dice a qué andén va; se dedujo del campo 'cabecera'."}
       - {equipo: "A3", medio: ascensor, entre: [anden_plaza_de_mayo, vestibulo],
          texto: "Ascensor N°3: Andén - vestíbulo",
-         duda: "Ídem A2."}
+         duda: "Ídem Ascensor N°2."}
       - {equipo: "E1", medio: escalera_mecanica, desde: vestibulo, hasta: salida_escalera,
          texto: "Escalera N°1: Vestíbulo - Av. Rivadavia 6332"}
       - {equipo: "E2", medio: escalera_mecanica, desde: anden_san_pedrito, hasta: vestibulo,
@@ -314,7 +314,7 @@ estaciones:
          duda: "La API no dice a qué andén va; se dedujo del campo 'cabecera'."}
       - {equipo: "A3", medio: ascensor, entre: [anden_plaza_de_mayo, vestibulo],
          texto: "Ascensor N°3: Andén - Vestíbulo",
-         duda: "Ídem A2."}
+         duda: "Ídem Ascensor N°2."}
       - {equipo: "E1", medio: escalera_mecanica, desde: vestibulo, hasta: salida_plaza_pueyrredon,
          texto: "Escalera N°1: Vestíbulo - Plaza General Pueyrredón"}
       - {equipo: "E2", medio: escalera_mecanica, desde: vestibulo, hasta: salida_rivadavia_6928,

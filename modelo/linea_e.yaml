@@ -201,7 +201,7 @@ estaciones:
          duda: "La API y el pedido de informes no coinciden en cuál de las dos (9 y 10) sube y cuál baja."}
       - {equipo: "E9", medio: escalera_mecanica, desde: vestibulo, hasta: anden,
          texto: "Escalera N°9: Vestíbulo - Andén Central",
-         duda: "Ídem E10."}
+         duda: "Ídem Escalera N°10."}
       - {equipo: "EExt", medio: escalera_mecanica, desde: pasillo_sur, hasta: salida_lima_899,
          texto: "Escalera Ext: Pasillo sur - Lima 899"}
 

@@ -154,7 +154,7 @@ estaciones:
          duda: "La API dice 'Andén - Entrepiso'; asumimos que es el nivel del hall, de donde sale el ascensor a la calle."}
       - {equipo: "A2", medio: ascensor, entre: [anden_hospitales, hall],
          texto: "Ascensor N°2: Andén sentido Hospitales - Entrepiso",
-         duda: "Ídem A1."}
+         duda: "Ídem Ascensor N°1."}
       - {equipo: "A3", medio: ascensor, entre: [hall, salida_pueyrredon_980],
          texto: "Ascensor N°3: Vestíbulo - Av. Pueyrredón 980"}
       - {equipo: "E1", medio: escalera_mecanica, desde: anden_facultad, hasta: hall,
@@ -194,7 +194,7 @@ estaciones:
          duda: "La API dice 'Andén - vestíbulo'; asumimos el hall boletería, de donde sale el ascensor a la calle."}
       - {equipo: "A3", medio: ascensor, entre: [anden_hospitales, hall],
          texto: "Ascensor N°3: Andén - vestíbulo",
-         duda: "Ídem A1."}
+         duda: "Ídem Ascensor N°2."}
       - {equipo: "A5", medio: ascensor, entre: [hall, salida_pueyrredon_562],
          texto: "Ascensor N° 1: Hall Boletería – Av. Pueyrredón 562"}
       - {equipo: "A2", medio: ascensor, entre: [anden_facultad, comb_b_alem],
@@ -254,7 +254,7 @@ estaciones:
          texto: "Salvaescalera P1: Hall Boletería – Conexión con L/A y Hall FF.CC. Sarmiento"}
       - {equipo: "P 2", medio: salvaescaleras, entre: [vestibulo, comb_sarmiento_a],
          texto: "Salvaescalera P2 Tren Sarmiento - Hall Boletería",
-         duda: "'Tren Sarmiento - Hall boletería': ¿es el mismo recorrido que S3 o un tramo distinto?"}
+         duda: "'Tren Sarmiento - Hall boletería': ¿es el mismo recorrido que la Salvaescalera P1 o un tramo distinto?"}
       - {equipo: "E4", medio: escalera_mecanica, desde: anden_facultad, hasta: entrepiso,
          texto: "Escalera N°4: Andén sentido a Facultad - Entrepiso"}
       - {equipo: "E5", medio: escalera_mecanica, desde: anden_facultad, hasta: entrepiso,
@@ -420,7 +420,7 @@ estaciones:
          duda: "La API dice solo 'Andén'; el andén sale del PDF (N°3 norte, N°4 sur)."}
       - {equipo: "E4", medio: escalera_mecanica, desde: anden_hospitales, hasta: vestibulo,
          texto: "Escalera N°4: Andén - Vestíbulo",
-         duda: "Ídem E3."}
+         duda: "Ídem Escalera N°3."}
       - {equipo: "E1", medio: escalera_mecanica, desde: vestibulo, hasta: salida_plaza,
          texto: "Escalera N°1:Vestíbulo - Plaza Parque de los Patricios"}
       - {equipo: "E2", medio: escalera_mecanica, desde: salida_plaza, hasta: vestibulo,
@@ -430,7 +430,7 @@ estaciones:
     categoria_oficial: a
     revisado: false
     dudas:
-      - "Terminal: se modela un solo andén en uso, para llegadas y salidas. Confirmar cuál es y que A3 va a ese andén."
+      - "Terminal: se modela un solo andén en uso, para llegadas y salidas. Confirmar cuál es y que el Ascensor N°3 va a ese andén."
     lugares:
       anden: {tipo: "anden", sentidos: ["Facultad de Derecho", "Hospitales"], nombre: "Andén operativo (terminal)"}
       anden_no_operativo: {tipo: "anden", sentidos: [], nombre: "Andén no operativo"}

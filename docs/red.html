@@ -302,7 +302,7 @@
   .ruta { display: grid; grid-template-columns: 62px 1fr; gap: 4px 10px; margin-top: 8px; font-size: 0.86rem; align-items: baseline; }
   .ruta .dir { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-secondary); }
   .pasos-ruta { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
-  .eq { font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: var(--surface); border: 1px solid var(--border); white-space: nowrap; }
+  .eq { font-size: 0.8rem; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: var(--surface); border: 1px solid var(--border); white-space: nowrap; }
   .eq.ascensor, .eq.salvaescaleras { border-color: var(--accent); color: var(--accent); }
   .flecha { color: var(--ink-muted); }
   .destino { font-weight: 600; }
@@ -313,7 +313,9 @@
   .dudas-lista li { color: var(--ink-secondary); }
   .tabla-wrap { overflow-x: auto; }
   table.equipos { font-size: 0.8rem; min-width: 560px; }
-  table.equipos td:first-child { font-family: "IBM Plex Mono", monospace; white-space: nowrap; }
+  table.equipos td:first-child { white-space: nowrap; }
+  table.equipos .codigo { font-family: "IBM Plex Mono", monospace; font-size: 0.74rem; color: var(--ink-muted); white-space: nowrap; }
+  table.equipos { min-width: 640px; }
   table.equipos td { padding: 6px 8px; }
   table.equipos .texto { color: var(--ink-muted); }
   .vacio { text-align: center; color: var(--ink-muted); padding: 30px 10px; }
@@ -443,8 +445,8 @@
     if (!r) return '<span class="nohay">No hay camino</span>';
     var pasos = r.pasos.map(function (p) {
       var otra = p.estacion !== e.nombre || p.linea !== e.linea;
-      return '<span class="eq ' + p.medio + '" title="' + esc(MEDIOS[p.medio] + (otra ? " en " + p.estacion + " (Línea " + p.linea + ")" : "")) + '">' +
-        esc(MEDIOS[p.medio].toLowerCase() + " " + p.equipo + (otra ? " · " + p.estacion : "")) + '</span>';
+      return '<span class="eq ' + p.medio + '" title="' + esc(MEDIOS[p.medio] + (otra ? " en " + p.estacion + " (Línea " + p.linea + ")" : "") + " · código de EMOVA: " + p.equipo) + '">' +
+        esc(p.nombre + (otra ? " · " + p.estacion : "")) + '</span>';
     });
     var calle = '<span class="destino">' + esc(r.calle) + '</span>';
     var partes = direccion === "salir" ? pasos.concat([calle]) : [calle].concat(pasos);
@@ -471,24 +473,24 @@
     var salidas = calles.length
       ? '<ul class="lista">' + calles.map(function (id) {
           var con = e.conexiones.filter(function (c) { return (c.entre || [c.desde, c.hasta]).indexOf(id) >= 0; })
-            .map(function (c) { return MEDIOS[c.medio].toLowerCase() + " " + c.equipo; });
+            .map(function (c) { return c.nombre; });
           return '<li>' + esc(e.lugares[id].direccion) + ' <span class="muted">· ' + esc(con.join(", ")) + '</span></li>';
         }).join("") + '</ul>'
       : '<p class="muted" style="font-size:0.86rem;margin:0">Las fuentes no informan ningún equipo que llegue a la calle.</p>';
 
     var equipos = e.conexiones.length
-      ? '<div class="tabla-wrap"><table class="equipos"><thead><tr><th>Equipo</th><th>Tipo</th><th>Recorrido</th><th>Texto de EMOVA</th></tr></thead><tbody>' +
+      ? '<div class="tabla-wrap"><table class="equipos"><thead><tr><th>Equipo</th><th>Tipo</th><th>Recorrido</th><th>Texto de EMOVA</th><th>Código</th></tr></thead><tbody>' +
         e.conexiones.map(function (c) {
           var tramo = c.entre
             ? c.entre.map(function (id) { return esc(nombreLugar(e, id)); }).join(" ↔ ")
             : esc(nombreLugar(e, c.desde)) + " → " + esc(nombreLugar(e, c.hasta));
-          return '<tr><td>' + esc(c.equipo) + '</td><td>' + MEDIOS[c.medio] + '</td><td>' + tramo +
+          return '<tr><td>' + esc(c.nombre) + '</td><td>' + MEDIOS[c.medio] + '</td><td>' + tramo +
             (c.duda ? '<div class="otra">Duda: ' + esc(c.duda) + '</div>' : "") +
             (c.nota ? '<div class="muted">' + esc(c.nota) + '</div>' : "") +
-            '</td><td class="texto">' + esc(c.texto) + '</td></tr>';
+            '</td><td class="texto">' + esc(c.texto) + '</td><td class="codigo">' + esc(c.equipo) + '</td></tr>';
         }).join("") +
         e.sin_ubicar.map(function (c) {
-          return '<tr><td>' + esc(c.equipo) + '</td><td>—</td><td><span class="otra">Sin ubicar.</span> ' + esc(c.motivo) + '</td><td class="texto">' + esc(c.texto) + '</td></tr>';
+          return '<tr><td>' + esc(c.nombre) + '</td><td>—</td><td><span class="otra">Sin ubicar.</span> ' + esc(c.motivo) + '</td><td class="texto">' + esc(c.texto) + '</td><td class="codigo">' + esc(c.equipo) + '</td></tr>';
         }).join("") + '</tbody></table></div>'
       : '<p class="muted" style="font-size:0.86rem;margin:0">EMOVA no informa ningún ascensor ni escalera mecánica en esta estación.</p>';
 
@@ -506,6 +508,7 @@
         '<h3>Salidas a la calle</h3>' + salidas +
         listaDudas +
         '<h3>Todos los equipos de la estación</h3>' + equipos +
+        (e.conexiones.length ? '<p class="muted" style="font-size:0.78rem;margin:8px 0 0">El nombre de cada equipo (“Escalera N°10”) es el que figura en el texto de EMOVA y en la señalización de la estación. El código es el identificador interno de EMOVA, que no siempre coincide con ese número.</p>' : "") +
         '<p class="muted" style="font-size:0.8rem;margin:12px 0 0">Clasificación oficial (Ley 6132): ' + CATEGORIAS[e.categoria_oficial] + '.</p>' +
       '</div></details>';
   }
