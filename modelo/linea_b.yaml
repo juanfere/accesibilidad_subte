@@ -1,0 +1,396 @@
+# Modelo de accesibilidad de la Línea B — BORRADOR A REVISAR
+#
+# Describe, para cada estación, los LUGARES (andenes, vestíbulos, salidas a la
+# calle, puntos de combinación) y las CONEXIONES entre ellos que dependen de un
+# medio de elevación. Se armó a mano leyendo los textos de la API de EMOVA y la
+# tabla de escaleras del pedido de informes (Res. 145/2026). Ver analisis.md.
+#
+# Cómo leerlo:
+#   lugares     tipo anden: "sentidos" = hacia dónde van los trenes que paran ahí
+#               (dos sentidos = andén central o terminal; ninguno = fuera de uso).
+#               "solo: llegada" / "solo: salida" = andén de terminal donde solo
+#               se baja o solo se sube al tren.
+#               tipo combinacion: si tiene "lugar", es ese mismo lugar de la
+#               otra estación (permite llegar a la calle a través de otra línea).
+#   conexiones  "equipo" es el código del medio en la API de EMOVA (campo nombre),
+#               que es lo que permite cruzarlo con el estado en vivo.
+#               "entre": se recorre en cualquier sentido (2 o más paradas).
+#               "desde" -> "hasta": se recorre en un solo sentido.
+#               "texto" es la descripción de EMOVA al momento de armar el mapa.
+#   sin_ubicar  equipos que EMOVA informa pero cuyo recorrido no se conoce.
+#   duda / dudas  lo que no se pudo determinar con las fuentes: REVISAR EN EL LUGAR.
+#   nota        aclaración sobre de dónde salió el dato.
+#   revisado    pasar a true cuando alguien que conoce la estación la validó.
+#
+# No figuran escaleras fijas, rampas ni desniveles: ninguna fuente los informa.
+
+linea: B
+cabeceras: [Leandro N. Alem, Juan Manuel de Rosas]   # las estaciones van en este orden
+estaciones:
+
+  - nombre: "Leandro N. Alem"
+    categoria_oficial: a
+    revisado: false
+    dudas:
+      - "No tiene ascensor propio: es accesible por el ascensor que une su andén con el de Correo Central (Línea E). Ese ascensor figura en el mapa de la Línea E."
+    lugares:
+      anden: {tipo: "anden", sentidos: ["Juan Manuel de Rosas", "Leandro N. Alem"], nombre: "Andén central (terminal)"}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      salida_corrientes_161: {tipo: "calle", direccion: "Av. Corrientes 161"}
+    conexiones:
+      - {equipo: "EInt", medio: escalera_mecanica, desde: anden, hasta: vestibulo,
+         texto: "Escalera N°1: Andén - Vestíbulo"}
+      - {equipo: "EExt", medio: escalera_mecanica, desde: vestibulo, hasta: salida_corrientes_161,
+         texto: "Escalera N°2 (exterior): Vestíbulo - Av. Corrientes 161"}
+
+  - nombre: "Florida"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Ninguna fuente informa equipos que lleguen a la calle. Qué escalera va al vestíbulo este y cuál al oeste sale del pedido de informes."
+    lugares:
+      anden: {tipo: "anden", sentidos: ["Leandro N. Alem", "Juan Manuel de Rosas"], nombre: "Andén central"}
+      vestibulo_este: {tipo: "interior", nombre: "Vestíbulo lado este"}
+      vestibulo_oeste: {tipo: "interior", nombre: "Vestíbulo lado oeste"}
+    conexiones:
+      - {equipo: "E19", medio: escalera_mecanica, desde: anden, hasta: vestibulo_este,
+         texto: "Escalera N°20: Ascendente Andén Central - Vestíbulo"}
+      - {equipo: "E20", medio: escalera_mecanica, desde: vestibulo_este, hasta: anden,
+         texto: "Escalera EN°19: Descendente Vestíbulo - Andén Central"}
+      - {equipo: "E21", medio: escalera_mecanica, desde: anden, hasta: vestibulo_oeste,
+         texto: "Escalera N°21: Ascendente Andén Central - Vestíbulo",
+         duda: "La API dice ascendente; el pedido de informes, descendente."}
+      - {equipo: "E22", medio: escalera_mecanica, desde: vestibulo_oeste, hasta: anden,
+         texto: "Escalera N°22: Descendente Vestíbulo - Andén Central",
+         duda: "La API dice descendente; el pedido de informes, ascendente."}
+
+  - nombre: "Carlos Pellegrini"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Ninguna fuente informa equipos que lleguen a la calle ni a las combinaciones con las líneas C y D."
+    lugares:
+      anden: {tipo: "anden", sentidos: ["Leandro N. Alem", "Juan Manuel de Rosas"], nombre: "Andén central"}
+      vestibulo_este: {tipo: "interior", nombre: "Vestíbulo lado este"}
+      vestibulo_oeste: {tipo: "interior", nombre: "Vestíbulo lado oeste"}
+    conexiones:
+      - {equipo: "E17", medio: escalera_mecanica, desde: anden, hasta: vestibulo_oeste,
+         texto: "Escalera N°17: Andén Central - Vestíbulo lado oeste"}
+      - {equipo: "E18", medio: escalera_mecanica, desde: anden, hasta: vestibulo_este,
+         texto: "Escalera N°18: Andén Central - Vestíbulo lado este"}
+
+  - nombre: "Uruguay"
+    categoria_oficial: a
+    revisado: false
+    lugares:
+      anden_alem: {tipo: "anden", sentidos: ["Leandro N. Alem"]}
+      anden_rosas: {tipo: "anden", sentidos: ["Juan Manuel de Rosas"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      salida_corrientes_1401: {tipo: "calle", direccion: "Av. Corrientes 1401"}
+      salida_corrientes_1463: {tipo: "calle", direccion: "Av. Corrientes 1463"}
+    conexiones:
+      - {equipo: "A1", medio: ascensor, entre: [vestibulo, salida_corrientes_1401],
+         texto: "Ascensor N°1: Vestíbulo - Av. Corrientes 1401"}
+      - {equipo: "A2", medio: ascensor, entre: [anden_rosas, vestibulo],
+         texto: "Ascensor N°2: Andén sentido Rosas - Vestíbulo"}
+      - {equipo: "A3", medio: ascensor, entre: [anden_alem, vestibulo],
+         texto: "Ascensor N°3: Andén sentido Alem - Vestíbulo"}
+      - {equipo: "EInt", medio: escalera_mecanica, desde: anden_alem, hasta: vestibulo,
+         texto: "Escalera N°1: Andén sentido Alem - Vestíbulo"}
+      - {equipo: "EExt", medio: escalera_mecanica, desde: vestibulo, hasta: salida_corrientes_1463,
+         texto: "Escalera N°2: Vestíbulo - Av. Corrientes 1463"}
+
+  - nombre: "Callao"
+    categoria_oficial: a
+    revisado: false
+    dudas:
+      - "Según el pedido de informes (30/6/2026), los ascensores 2 y 3 están fuera de servicio desde 2023 y 2025 (renovación y filtraciones)."
+    lugares:
+      anden_alem: {tipo: "anden", sentidos: ["Leandro N. Alem"]}
+      anden_rosas: {tipo: "anden", sentidos: ["Juan Manuel de Rosas"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      salida_corrientes_1811: {tipo: "calle", direccion: "Av. Corrientes 1811"}
+      salida_corrientes_1802: {tipo: "calle", direccion: "Av. Corrientes 1802"}
+      salida_callao_402: {tipo: "calle", direccion: "Av. Callao 402"}
+      salida_corrientes_1833: {tipo: "calle", direccion: "Av. Corrientes 1833"}
+    conexiones:
+      - {equipo: "A1", medio: ascensor, entre: [vestibulo, salida_corrientes_1811],
+         texto: "Ascensor N°1: Vestíbulo - Av. Corrientes 1811"}
+      - {equipo: "A2", medio: ascensor, entre: [anden_rosas, vestibulo],
+         texto: "Ascensor N°2: Andén sentido Rosas - Vestíbulo"}
+      - {equipo: "A3", medio: ascensor, entre: [anden_alem, vestibulo],
+         texto: "Ascensor N°3: Andén sentido Alem - Vestíbulo"}
+      - {equipo: "E13", medio: escalera_mecanica, desde: vestibulo, hasta: anden_alem,
+         texto: "Escalera N°13: Vestíbulo - Andén sentido Alem"}
+      - {equipo: "E16", medio: escalera_mecanica, desde: anden_rosas, hasta: vestibulo,
+         texto: "Escalera N°16: Andén sentido Rosas - Vestíbulo"}
+      - {equipo: "E14", medio: escalera_mecanica, desde: vestibulo, hasta: salida_corrientes_1802,
+         texto: "Escalera N°14: Vestíbulo - Av. Corrientes 1802"}
+      - {equipo: "E15", medio: escalera_mecanica, desde: vestibulo, hasta: salida_callao_402,
+         texto: "Escalera N°15: Vestíbulo - Av. Callao 402"}
+      - {equipo: "EExt", medio: escalera_mecanica, desde: vestibulo, hasta: salida_corrientes_1833,
+         texto: "Escalera N°1 (Ext): Vestíbulo - Av. Corrientes 1833"}
+
+  - nombre: "Pasteur - AMIA"
+    nombre_api: "Pasteur AMIA"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Ninguna fuente informa equipos que lleguen a la calle."
+    lugares:
+      anden_alem: {tipo: "anden", sentidos: ["Leandro N. Alem"]}
+      anden_rosas: {tipo: "anden", sentidos: ["Juan Manuel de Rosas"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+    conexiones:
+      - {equipo: "E10", medio: escalera_mecanica, desde: vestibulo, hasta: anden_rosas,
+         texto: "Escalera N° 12: Descendente de hall boletería - Andén sur (Sentido Rosas)"}
+      - {equipo: "E11", medio: escalera_mecanica, desde: vestibulo, hasta: anden_alem,
+         texto: "Escalera N°11: Descendente de Vestíbulo - Andén (sentido Alem)"}
+      - {equipo: "E12", medio: escalera_mecanica, desde: anden_alem, hasta: vestibulo,
+         texto: "Escalera N°9: Ascendente de andén (Sentido Alem) - Hall boletería"}
+      - {equipo: "E9", medio: escalera_mecanica, desde: anden_rosas, hasta: vestibulo,
+         texto: "Escalera N°10: Ascendente de andén (Sentido Rosas) - Hall boletería"}
+
+  - nombre: "Pueyrredón"
+    categoria_oficial: a
+    revisado: false
+    dudas:
+      - "No tiene ascensor propio: es accesible por combinación con Corrientes (Línea H). Esos ascensores figuran en el mapa de la Línea H."
+    lugares:
+      anden_alem: {tipo: "anden", sentidos: ["Leandro N. Alem"]}
+      anden_rosas: {tipo: "anden", sentidos: ["Juan Manuel de Rosas"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      salida_corrientes_2797: {tipo: "calle", direccion: "Av. Corrientes 2797"}
+    conexiones:
+      - {equipo: "E5", medio: escalera_mecanica, desde: vestibulo, hasta: anden_rosas,
+         texto: "Escalera N°8: Descendente de hall boletería - Andén (Sentido Rosas)"}
+      - {equipo: "E6", medio: escalera_mecanica, desde: anden_rosas, hasta: vestibulo,
+         texto: "Escalera N°6: Ascendente de Andén (sentido Rosas) - Vestíbulo"}
+      - {equipo: "E7", medio: escalera_mecanica, desde: anden_alem, hasta: vestibulo,
+         texto: "Escalera N°5: Ascendente de andén (Sentido Alem) - Hall boletería"}
+      - {equipo: "E8", medio: escalera_mecanica, desde: vestibulo, hasta: anden_alem,
+         texto: "Escalera N°7: Descendente de hall boletería - Andén (Sentido Alem)"}
+      - {equipo: "EExt", medio: escalera_mecanica, desde: vestibulo, hasta: salida_corrientes_2797,
+         texto: "Escalera EXT: Exterior: Vestíbulo - Av. Corrientes 2797"}
+
+  - nombre: "Carlos Gardel"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Ninguna fuente informa equipos que lleguen a la calle."
+    lugares:
+      anden_alem: {tipo: "anden", sentidos: ["Leandro N. Alem"]}
+      anden_rosas: {tipo: "anden", sentidos: ["Juan Manuel de Rosas"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+    conexiones:
+      - {equipo: "E1", medio: escalera_mecanica, desde: anden_alem, hasta: vestibulo,
+         texto: "Escalera N°1: Ascendente de andén norte (Sentido Alem) - Hall boletería"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: vestibulo, hasta: anden_rosas,
+         texto: "Escalera N°4: Descendente de hall boletería - Andén sur (Sentido Rosas)"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: vestibulo, hasta: anden_alem,
+         texto: "Escalera N°3: Descendente de Hall boletería - Andén norte (Sentido Alem)"}
+      - {equipo: "E4", medio: escalera_mecanica, desde: anden_rosas, hasta: vestibulo,
+         texto: "Escalera N°2: Ascendente de andén sur - Hall boletería (Sentido Rosas)"}
+
+  - nombre: "Medrano - Almagro"
+    nombre_api: "Medrano Almagro"
+    categoria_oficial: b
+    revisado: false
+    lugares:
+      anden_alem: {tipo: "anden", sentidos: ["Leandro N. Alem"]}
+      anden_rosas: {tipo: "anden", sentidos: ["Juan Manuel de Rosas"]}
+      salida_corrientes: {tipo: "calle", direccion: "Av. Corrientes (altura sin dato)"}
+    conexiones:
+      - {equipo: "EExt", medio: escalera_mecanica, desde: anden_rosas, hasta: salida_corrientes,
+         texto: "Escalera N°1: Cerrada por obras en la estación",
+         nota: "EMOVA reemplazó el texto por el aviso de cierre; el tramo sale de la tabla del pedido de informes."}
+
+  - nombre: "Ángel Gallardo"
+    categoria_oficial: b
+    revisado: false
+    lugares:
+      anden_alem: {tipo: "anden", sentidos: ["Leandro N. Alem"]}
+      anden_rosas: {tipo: "anden", sentidos: ["Juan Manuel de Rosas"]}
+      salida_corrientes: {tipo: "calle", direccion: "Av. Corrientes 4668"}
+    conexiones:
+      - {equipo: "EExt", medio: escalera_mecanica, desde: anden_rosas, hasta: salida_corrientes,
+         texto: "Escalera N°1: Andén sentido J. M. de Rosas - Av. Corrientes 4668"}
+
+  - nombre: "Malabia - Osvaldo Pugliese"
+    nombre_api: "Malabia O. Pugliese"
+    categoria_oficial: b
+    revisado: false
+    lugares:
+      anden_alem: {tipo: "anden", sentidos: ["Leandro N. Alem"]}
+      anden_rosas: {tipo: "anden", sentidos: ["Juan Manuel de Rosas"]}
+      salida_corrientes: {tipo: "calle", direccion: "Av. Corrientes 5288"}
+    conexiones:
+      - {equipo: "EExt", medio: escalera_mecanica, desde: anden_rosas, hasta: salida_corrientes,
+         texto: "Escalera N°1: Andén sentido J. M. de Rosas - Av. Corrientes 5288"}
+
+  - nombre: "Dorrego"
+    categoria_oficial: b
+    revisado: false
+    lugares:
+      anden_alem: {tipo: "anden", sentidos: ["Leandro N. Alem"]}
+      anden_rosas: {tipo: "anden", sentidos: ["Juan Manuel de Rosas"]}
+      salida_corrientes: {tipo: "calle", direccion: "Av. Corrientes 6192 (hacia el tren San Martín)"}
+    conexiones:
+      - {equipo: "EExt", medio: escalera_mecanica, desde: anden_rosas, hasta: salida_corrientes,
+         texto: "Escalera N°1: Andén sentido J. M. de Rosas - Av. Corrientes 6192 (hacia Tren San Martín)"}
+
+  - nombre: "Federico Lacroze"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Hay una obra en curso para instalar ascensores (Licitación 248/25, inicio 17/6/2026, plazo 12 meses)."
+    lugares:
+      anden_alem: {tipo: "anden", sentidos: ["Leandro N. Alem"]}
+      anden_rosas: {tipo: "anden", sentidos: ["Juan Manuel de Rosas"]}
+      ffcc_urquiza: {tipo: "combinacion", linea: "FFCC", estacion: "Federico Lacroze (Línea Urquiza)", nombre: "Hall del tren Urquiza"}
+      salida_plazoleta: {tipo: "calle", direccion: "Plazoleta (Av. Corrientes 6800)"}
+      salida_guzman: {tipo: "calle", direccion: "Av. Guzmán / estación del tren Urquiza"}
+    conexiones:
+      - {equipo: "EHall", medio: escalera_mecanica, desde: ffcc_urquiza, hasta: anden_alem,
+         texto: "Escalera HALL : Hall Línea Urquiza - Andén Línea B (Sentido Alem)"}
+      - {equipo: "ESE", medio: escalera_mecanica, desde: anden_rosas, hasta: salida_plazoleta,
+         texto: "Escalera SE: Ascendente de Andén (Sentido Rosas) - Plazoleta (Corrientes 6800)"}
+      - {equipo: "ESO", medio: escalera_mecanica, desde: anden_rosas, hasta: salida_guzman,
+         texto: "Escalera SO: Ascendente de Andén sentido Rosas - Av. Guzmán/Estación Línea Urquiza"}
+
+  - nombre: "Tronador - Villa Ortúzar"
+    nombre_api: "Tronador Villa Ortúzar"
+    categoria_oficial: a
+    revisado: false
+    lugares:
+      anden: {tipo: "anden", sentidos: ["Leandro N. Alem", "Juan Manuel de Rosas"], nombre: "Andén central"}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      salida_tronador_750: {tipo: "calle", direccion: "Tronador 750"}
+      salida_triunvirato_3101: {tipo: "calle", direccion: "Av. Triunvirato 3101"}
+      salida_triunvirato_3174: {tipo: "calle", direccion: "Av. Triunvirato 3174"}
+    conexiones:
+      - {equipo: "A1", medio: ascensor, entre: [vestibulo, salida_tronador_750],
+         texto: "Ascensor N°1: Vestíbulo - Tronador 750"}
+      - {equipo: "A2", medio: ascensor, entre: [anden, vestibulo],
+         texto: "Ascensor N°2: Andén central - vestíbulo"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: vestibulo, hasta: salida_triunvirato_3101,
+         texto: "Escalera N°1: Ascendente Andén central - Av.Triunvirato 3101",
+         duda: "La API dice que sale del andén; el pedido de informes, del hall boletería."}
+      - {equipo: "E2", medio: escalera_mecanica, desde: salida_triunvirato_3174, hasta: vestibulo,
+         texto: "Escalera N°2: Descendente Av.Triunvirato 3174 - Hall central boletería"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: anden, hasta: vestibulo,
+         texto: "Escalera N°3: Ascendente de Andén central - Hall boletería"}
+      - {equipo: "E4", medio: escalera_mecanica, desde: vestibulo, hasta: anden,
+         texto: "Escalera N°4: Descendente de Hall boletería - Andén Central"}
+
+  - nombre: "De los Incas - Parque Chas"
+    nombre_api: "De Los Incas Parque Chas"
+    categoria_oficial: a
+    revisado: false
+    lugares:
+      anden: {tipo: "anden", sentidos: ["Leandro N. Alem", "Juan Manuel de Rosas"], nombre: "Andén central"}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      salida_triunvirato_3680: {tipo: "calle", direccion: "Av. Triunvirato 3680"}
+      salida_malvinas: {tipo: "calle", direccion: "Av. Combatientes de Malvinas y Av. Triunvirato"}
+      salida_triunvirato_3711: {tipo: "calle", direccion: "Av. Triunvirato 3711"}
+    conexiones:
+      - {equipo: "A1", medio: ascensor, entre: [vestibulo, salida_triunvirato_3680],
+         texto: "Ascensor N°1: Vestíbulo - Av. Triunvirato 3680"}
+      - {equipo: "A2", medio: ascensor, entre: [anden, vestibulo],
+         texto: "Ascensor N°2: Andén Central - Vestíbulo"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: vestibulo, hasta: anden,
+         texto: "Escalera N°1: Vestíbulo - Andén Central"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: anden, hasta: vestibulo,
+         texto: "Escalera N°2: Andén Central - Vestíbulo"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: vestibulo, hasta: salida_malvinas,
+         texto: "Escalera N°3: Vestíbulo - Av. Combatientes de Malvinas y Av.Triunvirato"}
+      - {equipo: "E4", medio: escalera_mecanica, desde: vestibulo, hasta: salida_triunvirato_3711,
+         texto: "Escalera N°4: Vestíbulo - Av. Triunvirato 3711"}
+
+  - nombre: "Echeverría"
+    categoria_oficial: a
+    revisado: false
+    dudas:
+      - "La API no distingue los dos entrepisos; cuál es el este y cuál el oeste sale del pedido de informes."
+    lugares:
+      anden_alem: {tipo: "anden", sentidos: ["Leandro N. Alem"]}
+      anden_rosas: {tipo: "anden", sentidos: ["Juan Manuel de Rosas"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      entrepiso_este: {tipo: "interior", nombre: "Entrepiso este"}
+      entrepiso_oeste: {tipo: "interior", nombre: "Entrepiso oeste"}
+      salida_triunvirato_4250: {tipo: "calle", direccion: "Av. Triunvirato 4250"}
+      salida_triunvirato_4272: {tipo: "calle", direccion: "Av. Triunvirato 4272"}
+    conexiones:
+      - {equipo: "A1", medio: ascensor, entre: [vestibulo, salida_triunvirato_4250],
+         texto: "Ascensor N°1: Vestíbulo - Av. Triunvirato 4250"}
+      - {equipo: "A2", medio: ascensor, entre: [anden_rosas, vestibulo],
+         texto: "Ascensor N°2: Andén sentido Rosas - Vestíbulo"}
+      - {equipo: "A3", medio: ascensor, entre: [anden_alem, vestibulo],
+         texto: "Ascensor N°3: Andén sentido Alem - Vestíbulo"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: vestibulo, hasta: salida_triunvirato_4272,
+         texto: "Escalera N°1: Vestíbulo - Av. Triunvirato 4272"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: anden_alem, hasta: entrepiso_este,
+         texto: "Escalera N°5: Andén sentido Alem - Entrepiso"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: entrepiso_este, hasta: vestibulo,
+         texto: "Escalera N°2: Entrepiso - Vestíbulo"}
+      - {equipo: "E4", medio: escalera_mecanica, desde: anden_rosas, hasta: entrepiso_oeste,
+         texto: "Escalera N°4: Andén sentido Rosas - Entrepiso"}
+      - {equipo: "E5", medio: escalera_mecanica, desde: entrepiso_oeste, hasta: vestibulo,
+         texto: "Escalera N°3: Entrepiso - vestíbulo"}
+
+  - nombre: "Juan Manuel de Rosas - Villa Urquiza"
+    nombre_api: "Juan Manuel de Rosas Villa Urquiza"
+    categoria_oficial: a
+    revisado: false
+    dudas:
+      - "El sector este está cerrado por obras. Sus escaleras se ubicaron con el pedido de informes, cruzando el número de escalera."
+    lugares:
+      anden: {tipo: "anden", sentidos: ["Leandro N. Alem", "Juan Manuel de Rosas"], nombre: "Andén central (terminal)"}
+      entrepiso_oeste: {tipo: "interior", nombre: "Entrepiso lado Roosevelt (oeste)"}
+      hall_oeste: {tipo: "interior", nombre: "Hall boletería lado Roosevelt (oeste)"}
+      entrepiso_este: {tipo: "interior", nombre: "Entrepiso este"}
+      hall_este: {tipo: "interior", nombre: "Hall boletería este"}
+      salida_roosevelt_5109: {tipo: "calle", direccion: "Franklin D. Roosevelt 5109"}
+      salida_roosevelt_5110: {tipo: "calle", direccion: "Roosevelt 5110"}
+      salida_roosevelt_5170: {tipo: "calle", direccion: "Roosevelt 5170"}
+      salida_este: {tipo: "calle", direccion: "Salida del lado este (dirección sin dato)"}
+    conexiones:
+      - {equipo: "A6", medio: ascensor, entre: [anden, entrepiso_oeste],
+         texto: "Ascensor N°6: Andén Central - Entrepiso",
+         duda: "La API dice solo 'Entrepiso'; asumimos el del lado Roosevelt, que es el que está abierto."}
+      - {equipo: "A4", medio: ascensor, entre: [entrepiso_oeste, hall_oeste],
+         texto: "Ascensor N°4: Entrepiso - Vestíbulo",
+         duda: "Ídem A6."}
+      - {equipo: "A2", medio: ascensor, entre: [hall_oeste, salida_roosevelt_5109],
+         texto: "Ascensor N°2: Vestíbulo - Franklin D. Roosevelt 5109"}
+      - {equipo: "E9", medio: escalera_mecanica, desde: anden, hasta: entrepiso_oeste,
+         texto: "Escalera N°11: Ascendente de andén central - Entrepiso Roosvelt"}
+      - {equipo: "E11", medio: escalera_mecanica, desde: entrepiso_oeste, hasta: anden,
+         texto: "Escalera N°10: Descendente de entrepiso Roosvelt - Andén central"}
+      - {equipo: "E10", medio: escalera_mecanica, desde: entrepiso_oeste, hasta: hall_oeste,
+         texto: "Escalera N°7: Ascendente de entrepiso - Hall boletería Roosvelt"}
+      - {equipo: "E6", medio: escalera_mecanica, desde: hall_oeste, hasta: entrepiso_oeste,
+         texto: "Escalera N°6: Descendente de Hall boletería - Entrepiso Roosvelt"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: hall_oeste, hasta: salida_roosevelt_5110,
+         texto: "Escalera N°3: Ascendente de Hall boletería - Roosvelt 5110"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: salida_roosevelt_5170, hasta: hall_oeste,
+         texto: "Escalera N°2: Descendente de 5170 (Exterior) a hall de boletería Lado Roosvelt"}
+      - {equipo: "E4", medio: escalera_mecanica, desde: anden, hasta: entrepiso_este,
+         texto: "Escalera N°9: Cerrada por obras en la estación",
+         nota: "EMOVA reemplazó el texto por el aviso de cierre; el tramo sale de la tabla del pedido de informes."}
+      - {equipo: "E1", medio: escalera_mecanica, desde: entrepiso_este, hasta: anden,
+         texto: "Escalera N°8: Cerrada por obras en la estación",
+         nota: "EMOVA reemplazó el texto por el aviso de cierre; el tramo sale de la tabla del pedido de informes."}
+      - {equipo: "E5", medio: escalera_mecanica, desde: entrepiso_este, hasta: hall_este,
+         texto: "Escalera N°4: Cerrada por obras en la estación",
+         nota: "EMOVA reemplazó el texto por el aviso de cierre; el tramo sale de la tabla del pedido de informes."}
+      - {equipo: "E7", medio: escalera_mecanica, desde: hall_este, hasta: entrepiso_este,
+         texto: "Escalera N°5: Cerrada por obras en la estación",
+         nota: "EMOVA reemplazó el texto por el aviso de cierre; el tramo sale de la tabla del pedido de informes."}
+      - {equipo: "E8", medio: escalera_mecanica, desde: hall_este, hasta: salida_este,
+         texto: "Escalera N°1: Cerrada por obras en la estación",
+         nota: "EMOVA reemplazó el texto por el aviso de cierre; el tramo sale de la tabla del pedido de informes."}
+    sin_ubicar:
+      - {equipo: "A1", texto: "Ascensor N°1: Cerrado por obras en la estación", motivo: "Cerrado por obras; EMOVA reemplazó el texto. Probablemente sea del sector este."}
+      - {equipo: "A3", texto: "Ascensor N°3: Cerrado por obras en la estación", motivo: "Cerrado por obras; EMOVA reemplazó el texto. Probablemente sea del sector este."}
+      - {equipo: "A5", texto: "Ascensor N°5: Cerrado por obras en la estación", motivo: "Cerrado por obras; EMOVA reemplazó el texto. Probablemente sea del sector este."}

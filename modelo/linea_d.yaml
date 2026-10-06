@@ -1,0 +1,377 @@
+# Modelo de accesibilidad de la Línea D — BORRADOR A REVISAR
+#
+# Describe, para cada estación, los LUGARES (andenes, vestíbulos, salidas a la
+# calle, puntos de combinación) y las CONEXIONES entre ellos que dependen de un
+# medio de elevación. Se armó a mano leyendo los textos de la API de EMOVA y la
+# tabla de escaleras del pedido de informes (Res. 145/2026). Ver analisis.md.
+#
+# Cómo leerlo:
+#   lugares     tipo anden: "sentidos" = hacia dónde van los trenes que paran ahí
+#               (dos sentidos = andén central o terminal; ninguno = fuera de uso).
+#               "solo: llegada" / "solo: salida" = andén de terminal donde solo
+#               se baja o solo se sube al tren.
+#               tipo combinacion: si tiene "lugar", es ese mismo lugar de la
+#               otra estación (permite llegar a la calle a través de otra línea).
+#   conexiones  "equipo" es el código del medio en la API de EMOVA (campo nombre),
+#               que es lo que permite cruzarlo con el estado en vivo.
+#               "entre": se recorre en cualquier sentido (2 o más paradas).
+#               "desde" -> "hasta": se recorre en un solo sentido.
+#               "texto" es la descripción de EMOVA al momento de armar el mapa.
+#   sin_ubicar  equipos que EMOVA informa pero cuyo recorrido no se conoce.
+#   duda / dudas  lo que no se pudo determinar con las fuentes: REVISAR EN EL LUGAR.
+#   nota        aclaración sobre de dónde salió el dato.
+#   revisado    pasar a true cuando alguien que conoce la estación la validó.
+#
+# No figuran escaleras fijas, rampas ni desniveles: ninguna fuente los informa.
+
+linea: D
+cabeceras: [Catedral, Congreso de Tucumán]   # las estaciones van en este orden
+estaciones:
+
+  - nombre: "Catedral"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Terminal con dos andenes: se asumió que el norte es de llegada y el sur de salida, porque un ascensor es 'solo hacia el exterior' y el otro 'solo ingreso'. CONFIRMAR."
+    lugares:
+      anden_norte: {tipo: "anden", sentidos: ["Catedral"], nombre: "Andén norte (de llegada)", solo: llegada}
+      anden_sur: {tipo: "anden", sentidos: ["Congreso de Tucumán"], nombre: "Andén sur (de salida a Congreso de Tucumán)", solo: salida}
+      salida_saenz_pena_534: {tipo: "calle", direccion: "Av. Roque Sáenz Peña 534"}
+      salida_saenz_pena_567: {tipo: "calle", direccion: "Av. Roque Sáenz Peña 567"}
+      salida_saenz_pena_florida: {tipo: "calle", direccion: "Av. Roque Sáenz Peña y Florida"}
+    conexiones:
+      - {equipo: "A1", medio: ascensor, desde: salida_saenz_pena_534, hasta: anden_sur,
+         texto: "Ascensor N°1: Andén sur sentido Congreso de Tucumán - Av. Roque Sáenz Peña 534 (sólo ingreso)"}
+      - {equipo: "A2", medio: ascensor, desde: anden_norte, hasta: salida_saenz_pena_567,
+         texto: "Ascensor N° 2 Andén Norte - Sólo hacia el exterior: Av. Roque Sáenz Peña 567"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: anden_norte, hasta: salida_saenz_pena_florida,
+         texto: "Escalera N°1: Andén - Av. Roque Sáenz Peña y Florida (Exterior)"}
+
+  - nombre: "9 de Julio"
+    categoria_oficial: d
+    revisado: false
+    dudas:
+      - "No sabemos de cuál de los dos andenes de la Línea C sale la escalera 2 (las fuentes se contradicen)."
+    lugares:
+      anden_catedral: {tipo: "anden", sentidos: ["Catedral"]}
+      anden_congreso: {tipo: "anden", sentidos: ["Congreso de Tucumán"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo Línea D"}
+      comb_c: {tipo: "combinacion", linea: "C", estacion: "Diagonal Norte", nombre: "Andén de Diagonal Norte (Línea C)"}
+      salida_saenz_pena_carabelas: {tipo: "calle", direccion: "Av. Roque Sáenz Peña y Carabelas"}
+    conexiones:
+      - {equipo: "A Ext", medio: ascensor, entre: [anden_congreso, salida_saenz_pena_carabelas],
+         texto: "Ascensor 1: Andén sentido C. de Tucumán. Av. Pres. Roque Sáenz Peña y Carabelas."}
+      - {equipo: "E2", medio: escalera_mecanica, desde: comb_c, hasta: vestibulo,
+         texto: "Escalera N°2: Línea C - vestíbulo Línea D"}
+
+  - nombre: "Tribunales - Teatro Colón"
+    nombre_api: "Tribunales – Teatro Colón"
+    categoria_oficial: a
+    revisado: false
+    dudas:
+      - "Estación cerrada por obras al armar el mapa. Figura como accesible, pero no se conoce el recorrido de su ascensor."
+    lugares:
+      anden: {tipo: "anden", sentidos: ["Catedral", "Congreso de Tucumán"], nombre: "Andén central"}
+      hall_este: {tipo: "interior", nombre: "Hall boletería este"}
+      hall_oeste: {tipo: "interior", nombre: "Hall boletería oeste"}
+      salida_vereda: {tipo: "calle", direccion: "Vereda (dirección sin dato)"}
+    conexiones:
+      - {equipo: "E3", medio: escalera_mecanica, desde: anden, hasta: hall_este,
+         texto: "Escalera N°3: Cerrada por obras en la estación",
+         nota: "EMOVA reemplazó el texto por el aviso de cierre; el tramo sale de la tabla del pedido de informes."}
+      - {equipo: "E4", medio: escalera_mecanica, desde: hall_este, hasta: anden,
+         texto: "Escalera N°4: Cerrada por obras en la estación",
+         nota: "EMOVA reemplazó el texto por el aviso de cierre; el tramo sale de la tabla del pedido de informes."}
+      - {equipo: "E6", medio: escalera_mecanica, desde: anden, hasta: hall_oeste,
+         texto: "Escalera N°6: Cerrada por obras en la estación",
+         nota: "EMOVA reemplazó el texto por el aviso de cierre; el tramo sale de la tabla del pedido de informes."}
+      - {equipo: "E5", medio: escalera_mecanica, desde: hall_oeste, hasta: anden,
+         texto: "Escalera N°5: Cerrada por obras en la estación",
+         nota: "EMOVA reemplazó el texto por el aviso de cierre; el tramo sale de la tabla del pedido de informes."}
+      - {equipo: "EExt", medio: escalera_mecanica, desde: hall_oeste, hasta: salida_vereda,
+         texto: "Escalera ext: Cerrada por obras en la estación",
+         nota: "EMOVA reemplazó el texto por el aviso de cierre; el tramo sale de la tabla del pedido de informes."}
+    sin_ubicar:
+      - {equipo: "A1", texto: "Ascensor N°1: Cerrada por obras en la estación", motivo: "Cerrado por obras; EMOVA reemplazó el texto y el pedido de informes no trae ascensores."}
+
+  - nombre: "Callao"
+    categoria_oficial: b
+    revisado: false
+    lugares:
+      anden_catedral: {tipo: "anden", sentidos: ["Catedral"]}
+      anden_congreso: {tipo: "anden", sentidos: ["Congreso de Tucumán"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      salida_cordoba_1710: {tipo: "calle", direccion: "Av. Córdoba 1710"}
+      salida_cordoba_1811: {tipo: "calle", direccion: "Av. Córdoba 1811"}
+    conexiones:
+      - {equipo: "A1", medio: ascensor, entre: [anden_congreso, vestibulo, salida_cordoba_1710],
+         texto: "Ascensor N°1: Andén sentido C. de Tucumán (-2) - Vestíbulo (-1) y Av. Córdoba 1710"}
+      - {equipo: "EExt", medio: escalera_mecanica, desde: vestibulo, hasta: salida_cordoba_1811,
+         texto: "Escalera N°1: Vestíbulo norte - Av. Córdoba 1811",
+         duda: "La API dice 'vestíbulo norte'; asumimos que es el mismo vestíbulo donde para el ascensor."}
+
+  - nombre: "Facultad de Medicina"
+    categoria_oficial: a
+    revisado: false
+    lugares:
+      anden_catedral: {tipo: "anden", sentidos: ["Catedral"]}
+      anden_congreso: {tipo: "anden", sentidos: ["Congreso de Tucumán"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      salida_cordoba_2161: {tipo: "calle", direccion: "Av. Córdoba 2161"}
+      salida_cordoba_2160: {tipo: "calle", direccion: "Av. Córdoba 2160"}
+      salida_cordoba_uriburu: {tipo: "calle", direccion: "Av. Córdoba y Pte. Uriburu"}
+    conexiones:
+      - {equipo: "A1", medio: ascensor, entre: [anden_catedral, salida_cordoba_2161],
+         texto: "Ascensor N°1: Andén sentido Catedral - Av. Córdoba 2161"}
+      - {equipo: "A2", medio: ascensor, entre: [anden_congreso, salida_cordoba_2160],
+         texto: "Ascensor N°2: Andén sentido C. de Tucumán - Av. Córdoba 2160"}
+      - {equipo: "E7", medio: escalera_mecanica, desde: anden_catedral, hasta: vestibulo,
+         texto: "Escalera N°7: Andén sentido Catedral - Vestíbulo"}
+      - {equipo: "E8", medio: escalera_mecanica, desde: anden_congreso, hasta: vestibulo,
+         texto: "Escalera N°8: Andén sentido C. de Tucumán - Vestíbulo"}
+      - {equipo: "EExt", medio: escalera_mecanica, desde: vestibulo, hasta: salida_cordoba_uriburu,
+         texto: "Escalera N°1 Ext: Vestíbulo - Av. Córdoba y Pte. Uriburu"}
+
+  - nombre: "Pueyrredón"
+    categoria_oficial: a
+    revisado: false
+    dudas:
+      - "No tiene ascensor propio: es accesible por combinación con Santa Fe (Línea H). Ese ascensor figura en el mapa de la Línea H."
+    lugares:
+      anden: {tipo: "anden", sentidos: ["Catedral", "Congreso de Tucumán"], nombre: "Andén central"}
+      vestibulo: {tipo: "interior", nombre: "Hall boletería este / vestíbulo"}
+      tunel_combinacion: {tipo: "interior", nombre: "Túnel de combinación con Línea H"}
+      salida_santa_fe_2516: {tipo: "calle", direccion: "Av. Santa Fe 2516"}
+    conexiones:
+      - {equipo: "E9", medio: escalera_mecanica, desde: anden, hasta: vestibulo,
+         texto: "Escalera N°9: Ascendente de andén central a hall boletería este"}
+      - {equipo: "E10", medio: escalera_mecanica, desde: vestibulo, hasta: anden,
+         texto: "Escalera N°10: Andén central - Vestíbulo",
+         duda: "La API no aclara el sentido; el pedido de informes dice que baja."}
+      - {equipo: "EExt", medio: escalera_mecanica, desde: tunel_combinacion, hasta: salida_santa_fe_2516,
+         texto: "Escalera N°1 Ext: Túnel de combinación- Av Santa Fe 2516"}
+
+  - nombre: "Agüero"
+    categoria_oficial: b
+    revisado: false
+    lugares:
+      anden_catedral: {tipo: "anden", sentidos: ["Catedral"]}
+      anden_congreso: {tipo: "anden", sentidos: ["Congreso de Tucumán"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      salida_santa_fe_2915: {tipo: "calle", direccion: "Av. Santa Fe 2915"}
+    conexiones:
+      - {equipo: "E11", medio: escalera_mecanica, desde: anden_catedral, hasta: vestibulo,
+         texto: "Escalera N°11: Andén sentido Catedral - vestíbulo"}
+      - {equipo: "E12", medio: escalera_mecanica, desde: anden_congreso, hasta: vestibulo,
+         texto: "Escalera N°12: Andén sentido Congreso de T. - vestíbulo"}
+      - {equipo: "EExt", medio: escalera_mecanica, desde: vestibulo, hasta: salida_santa_fe_2915,
+         texto: "Escalera Ext: Vestíbulo - Av. Santa Fe 2915"}
+
+  - nombre: "Bulnes"
+    categoria_oficial: e
+    revisado: false
+    lugares:
+      anden_catedral: {tipo: "anden", sentidos: ["Catedral"]}
+      anden_congreso: {tipo: "anden", sentidos: ["Congreso de Tucumán"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      salida_santa_fe_3256: {tipo: "calle", direccion: "Av. Santa Fe 3256"}
+    conexiones:
+      - {equipo: "EExt", medio: escalera_mecanica, desde: vestibulo, hasta: salida_santa_fe_3256,
+         texto: "Escalera N°1: Boletería - Av. Santa Fe 3256"}
+
+  - nombre: "Scalabrini Ortiz"
+    nombre_api: null   # EMOVA no informa ningún equipo en esta estación
+    categoria_oficial: b
+    revisado: false
+    lugares:
+      anden_catedral: {tipo: "anden", sentidos: ["Catedral"]}
+      anden_congreso: {tipo: "anden", sentidos: ["Congreso de Tucumán"]}
+    conexiones: []
+
+  - nombre: "Plaza Italia"
+    categoria_oficial: b
+    revisado: false
+    lugares:
+      anden: {tipo: "anden", sentidos: ["Catedral", "Congreso de Tucumán"], nombre: "Andén central"}
+      vestibulo_este: {tipo: "interior", nombre: "Vestíbulo este"}
+      vestibulo_oeste: {tipo: "interior", nombre: "Vestíbulo oeste"}
+      salida_santa_fe_4026: {tipo: "calle", direccion: "Av. Santa Fe 4026"}
+    conexiones:
+      - {equipo: "E13", medio: escalera_mecanica, desde: anden, hasta: vestibulo_este,
+         texto: "Escalera N°13: Andén central - vestíbulo este"}
+      - {equipo: "E14", medio: escalera_mecanica, desde: vestibulo_este, hasta: anden,
+         texto: "Escalera N°14: Vestíbulo este - andén central"}
+      - {equipo: "E15", medio: escalera_mecanica, desde: anden, hasta: vestibulo_oeste,
+         texto: "Escalera N°15: Andén central - vestíbulo oeste"}
+      - {equipo: "E16", medio: escalera_mecanica, desde: vestibulo_oeste, hasta: anden,
+         texto: "Escalera N°16: Vestíbulo oeste - andén central"}
+      - {equipo: "EExt", medio: escalera_mecanica, desde: vestibulo_este, hasta: salida_santa_fe_4026,
+         texto: "Escalera Ext: Vestíbulo este - Av. Santa Fe 4026"}
+
+  - nombre: "Palermo"
+    categoria_oficial: b
+    revisado: false
+    lugares:
+      anden: {tipo: "anden", sentidos: ["Catedral", "Congreso de Tucumán"], nombre: "Andén central"}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      salida_santa_fe_4636: {tipo: "calle", direccion: "Av. Santa Fe 4636"}
+    conexiones:
+      - {equipo: "E17", medio: escalera_mecanica, desde: vestibulo, hasta: anden,
+         texto: "Escalera N°17: Vestíbulo - andén central"}
+      - {equipo: "E18", medio: escalera_mecanica, desde: anden, hasta: vestibulo,
+         texto: "Escalera N°18: Andén central - vestíbulo"}
+      - {equipo: "EExt", medio: escalera_mecanica, desde: vestibulo, hasta: salida_santa_fe_4636,
+         texto: "Escalera Ext: Vestíbulo - Av. Santa Fe 4636"}
+
+  - nombre: "Ministro Carranza"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Ninguna fuente informa equipos que lleguen a la calle."
+    lugares:
+      anden_catedral: {tipo: "anden", sentidos: ["Catedral"]}
+      anden_congreso: {tipo: "anden", sentidos: ["Congreso de Tucumán"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      entrepiso_noroeste: {tipo: "interior", nombre: "Entrepiso de salida noroeste"}
+      entrepiso_sur: {tipo: "interior", nombre: "Entrepiso de salida sur"}
+      pasillo_noreste: {tipo: "interior", nombre: "Pasillo noreste"}
+      entrepiso_noreste: {tipo: "interior", nombre: "Entrepiso noreste (boletería)"}
+    conexiones:
+      - {equipo: "E21", medio: escalera_mecanica, desde: vestibulo, hasta: anden_catedral,
+         texto: "Escalera N°21: Vestíbulo - Andén sentido Catedral"}
+      - {equipo: "E22", medio: escalera_mecanica, desde: vestibulo, hasta: anden_congreso,
+         texto: "Escalera N°22: Vestíbulo - Andén sentido Congreso de Tucumán"}
+      - {equipo: "E23", medio: escalera_mecanica, desde: anden_catedral, hasta: vestibulo,
+         texto: "Escalera N°23: Andén sentido Catedral - vestíbulo"}
+      - {equipo: "E24", medio: escalera_mecanica, desde: anden_congreso, hasta: vestibulo,
+         texto: "Escalera N°24: Andén sentido Congreso de Tucumán - Vestíbulo"}
+      - {equipo: "E19", medio: escalera_mecanica, desde: vestibulo, hasta: entrepiso_noroeste,
+         texto: "Escalera N°19: Vestíbulo - Entrepiso de salida noroeste"}
+      - {equipo: "E20", medio: escalera_mecanica, desde: entrepiso_noroeste, hasta: vestibulo,
+         texto: "Escalera N°20: Entrepiso de salida noroeste - vestíbulo"}
+      - {equipo: "E25", medio: escalera_mecanica, desde: vestibulo, hasta: entrepiso_sur,
+         texto: "Escalera N°25: Vestíbulo - Entrepiso de salida sur"}
+      - {equipo: "E26", medio: escalera_mecanica, desde: pasillo_noreste, hasta: entrepiso_noreste,
+         texto: "Escalera N°26: Pasillo noreste - Entrepiso noreste (Boletería)"}
+
+  - nombre: "Olleros"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Hay una licitación en curso para instalar ascensores (Licitación 260/25)."
+    lugares:
+      anden_catedral: {tipo: "anden", sentidos: ["Catedral"]}
+      anden_congreso: {tipo: "anden", sentidos: ["Congreso de Tucumán"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      salida_cabildo_700: {tipo: "calle", direccion: "Av. Cabildo 700"}
+    conexiones:
+      - {equipo: "E27", medio: escalera_mecanica, desde: vestibulo, hasta: anden_catedral,
+         texto: "Escalera N°27: Vestíbulo - Andén sentido Catedral"}
+      - {equipo: "E28", medio: escalera_mecanica, desde: vestibulo, hasta: anden_congreso,
+         texto: "Escalera N°28: Vestíbulo - Andén sentido Congreso de Tucumán"}
+      - {equipo: "E29", medio: escalera_mecanica, desde: anden_catedral, hasta: vestibulo,
+         texto: "Escalera N°29: Andén sentido Catedral - Vestíbulo"}
+      - {equipo: "E30", medio: escalera_mecanica, desde: anden_congreso, hasta: vestibulo,
+         texto: "Escalera N°30: Andén sentido Congreso de Tucumán - Vestíbulo"}
+      - {equipo: "S31", medio: salvaescaleras, entre: [vestibulo, salida_cabildo_700],
+         texto: "Salvaescalera N°1: Vestíbulo - Av. Cabildo 700"}
+      - {equipo: "S32", medio: salvaescaleras, entre: [anden_catedral, vestibulo],
+         texto: "Salvaescalera N°2: Andén sentido Catedral - Vestíbulo"}
+      - {equipo: "S33", medio: salvaescaleras, entre: [anden_catedral, vestibulo],
+         texto: "Salvaescalera N°3: Andén sentido Catedral - Vestíbulo",
+         duda: "La API dice que las dos salvaescaleras de andén son del sentido Catedral: ¿una es del otro andén?"}
+
+  - nombre: "José Hernández"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Según el pedido de informes, la salvaescaleras N°1 está fuera de servicio desde 2022 por obsoleta. Hay una licitación en curso para instalar ascensores (260/25)."
+    lugares:
+      anden_catedral: {tipo: "anden", sentidos: ["Catedral"]}
+      anden_congreso: {tipo: "anden", sentidos: ["Congreso de Tucumán"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      salida_cabildo_1617: {tipo: "calle", direccion: "Av. Cabildo 1617"}
+      salida_cabildo_1500: {tipo: "calle", direccion: "Av. Cabildo 1500"}
+    conexiones:
+      - {equipo: "E31", medio: escalera_mecanica, desde: vestibulo, hasta: anden_catedral,
+         texto: "Escalera N°31: Hall central boletería - Andén sentido Catedral"}
+      - {equipo: "E32", medio: escalera_mecanica, desde: vestibulo, hasta: anden_congreso,
+         texto: "Escalera N°32: Vestíbulo - Andén sentido de Tucumán"}
+      - {equipo: "E34", medio: escalera_mecanica, desde: anden_catedral, hasta: vestibulo,
+         texto: "Escalera N°33: Ascendente de andén norte (Sentido a Catedral) a hall central boletería (Lado este)"}
+      - {equipo: "E33", medio: escalera_mecanica, desde: anden_congreso, hasta: vestibulo,
+         texto: "Escalera N°34: Ascendente de hall boletería a andén sur",
+         duda: "El texto de la API es confuso ('ascendente de hall a andén sur'); el pedido de informes dice andén sur a hall."}
+      - {equipo: "E35", medio: escalera_mecanica, desde: vestibulo, hasta: salida_cabildo_1617,
+         texto: "Escalera N°35:Ascendente de hall central boletería a Cabildo 1617 (Exterior) (Lado noroeste)"}
+      - {equipo: "S36", medio: salvaescaleras, entre: [vestibulo, salida_cabildo_1500],
+         texto: "Salvaescalera N°1: Vestibulo - Av. Cabildo 1500"}
+      - {equipo: "S37", medio: salvaescaleras, entre: [anden_catedral, vestibulo],
+         texto: "Salvaescalera N°2: Andén sentido Catedral - vestíbulo"}
+      - {equipo: "S38", medio: salvaescaleras, entre: [anden_congreso, vestibulo],
+         texto: "Salvaescalera N°3: Andén - vestíbulo",
+         duda: "La API dice solo 'Andén'; asumimos el de Congreso de Tucumán."}
+
+  - nombre: "Juramento"
+    categoria_oficial: a
+    revisado: false
+    lugares:
+      anden_catedral: {tipo: "anden", sentidos: ["Catedral"]}
+      anden_congreso: {tipo: "anden", sentidos: ["Congreso de Tucumán"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      salida_cabildo_2043: {tipo: "calle", direccion: "Av. Cabildo 2043"}
+      salida_cabildo_2040: {tipo: "calle", direccion: "Av. Cabildo 2040"}
+      salida_cabildo_2025: {tipo: "calle", direccion: "Av. Cabildo 2025"}
+      salida_cabildo_2076: {tipo: "calle", direccion: "Av. Cabildo 2076"}
+      salida_cabildo_2077: {tipo: "calle", direccion: "Av. Cabildo 2077"}
+    conexiones:
+      - {equipo: "A1", medio: ascensor, entre: [vestibulo, salida_cabildo_2043],
+         texto: "Ascensor N°1: Vestíbulo - Av. Cabildo 2043."}
+      - {equipo: "A2", medio: ascensor, entre: [anden_congreso, vestibulo],
+         texto: "Ascensor N°2: Andén sentido Congreso de Tucumán - Boletería."}
+      - {equipo: "A3", medio: ascensor, entre: [anden_catedral, vestibulo],
+         texto: "Ascensor N°3: Andén sentido Catedral - Vestíbulo."}
+      - {equipo: "E36", medio: escalera_mecanica, desde: anden_congreso, hasta: vestibulo,
+         texto: "Escalera N°36: Cerrada por obras de renovación de medio de elevación",
+         nota: "EMOVA reemplazó el texto por el aviso de cierre; el tramo sale de la tabla del pedido de informes."}
+      - {equipo: "E37", medio: escalera_mecanica, desde: vestibulo, hasta: anden_catedral,
+         texto: "Escalera N°37: Cerrada por obras de renovación de medio de elevación",
+         nota: "EMOVA reemplazó el texto por el aviso de cierre; el tramo sale de la tabla del pedido de informes."}
+      - {equipo: "E38", medio: escalera_mecanica, desde: vestibulo, hasta: salida_cabildo_2040,
+         texto: "Escalera N°38: Boletería - Av. Cabildo 2040"}
+      - {equipo: "E39", medio: escalera_mecanica, desde: vestibulo, hasta: salida_cabildo_2025,
+         texto: "Escalera N°39: Boletería - Av. Cabildo 2025"}
+      - {equipo: "E40", medio: escalera_mecanica, desde: salida_cabildo_2076, hasta: vestibulo,
+         texto: "Escalera N°40: Av. Cabildo 2076 - Boletería"}
+      - {equipo: "E41", medio: escalera_mecanica, desde: salida_cabildo_2077, hasta: vestibulo,
+         texto: "Escalera N°41: Av. Cabildo 2077 - Boletería"}
+
+  - nombre: "Congreso de Tucumán"
+    nombre_api: "Congreso Tucumán"
+    categoria_oficial: a
+    revisado: false
+    lugares:
+      anden: {tipo: "anden", sentidos: ["Catedral", "Congreso de Tucumán"], nombre: "Andén central (terminal)"}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      salida_cabildo_2834: {tipo: "calle", direccion: "Av. Cabildo 2834"}
+      salida_cabildo_2860: {tipo: "calle", direccion: "Av. Cabildo 2860"}
+      salida_cabildo_2832: {tipo: "calle", direccion: "Av. Cabildo 2832"}
+    conexiones:
+      - {equipo: "A1", medio: ascensor, entre: [vestibulo, salida_cabildo_2834],
+         texto: "Ascensor N°1: Vestíbulo - Av. Cabildo 2834"}
+      - {equipo: "A2", medio: ascensor, entre: [anden, vestibulo],
+         texto: "Ascensor N°2: Andén Central - Vestíbulo."}
+      - {equipo: "E42", medio: escalera_mecanica, desde: vestibulo, hasta: anden,
+         texto: "Escalera N°42: Vestíbulo este - Andén central"}
+      - {equipo: "E43", medio: escalera_mecanica, desde: anden, hasta: vestibulo,
+         texto: "Escalera N°43: Andén Central - Vestíbulo este"}
+      - {equipo: "E44", medio: escalera_mecanica, desde: anden, hasta: vestibulo,
+         texto: "Escalera 44: Cerrada por obras de renovación de medio de elevación",
+         nota: "EMOVA reemplazó el texto por el aviso de cierre; el tramo sale de la tabla del pedido de informes."}
+      - {equipo: "E45", medio: escalera_mecanica, desde: vestibulo, hasta: anden,
+         texto: "Escalera 45: Cerrada por obras de renovación de medio de elevación",
+         nota: "EMOVA reemplazó el texto por el aviso de cierre; el tramo sale de la tabla del pedido de informes."}
+      - {equipo: "E46", medio: escalera_mecanica, desde: vestibulo, hasta: salida_cabildo_2860,
+         texto: "Escalera N°46: Vestíbulo - Av. Cabildo 2860"}
+      - {equipo: "E47", medio: escalera_mecanica, desde: vestibulo, hasta: salida_cabildo_2832,
+         texto: "Escalera N°47: Vestíbulo - Av. Cabildo 2832"}

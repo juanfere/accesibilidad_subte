@@ -1,0 +1,214 @@
+# Modelo de accesibilidad de la Línea C — BORRADOR A REVISAR
+#
+# Describe, para cada estación, los LUGARES (andenes, vestíbulos, salidas a la
+# calle, puntos de combinación) y las CONEXIONES entre ellos que dependen de un
+# medio de elevación. Se armó a mano leyendo los textos de la API de EMOVA y la
+# tabla de escaleras del pedido de informes (Res. 145/2026). Ver analisis.md.
+#
+# Cómo leerlo:
+#   lugares     tipo anden: "sentidos" = hacia dónde van los trenes que paran ahí
+#               (dos sentidos = andén central o terminal; ninguno = fuera de uso).
+#               "solo: llegada" / "solo: salida" = andén de terminal donde solo
+#               se baja o solo se sube al tren.
+#               tipo combinacion: si tiene "lugar", es ese mismo lugar de la
+#               otra estación (permite llegar a la calle a través de otra línea).
+#   conexiones  "equipo" es el código del medio en la API de EMOVA (campo nombre),
+#               que es lo que permite cruzarlo con el estado en vivo.
+#               "entre": se recorre en cualquier sentido (2 o más paradas).
+#               "desde" -> "hasta": se recorre en un solo sentido.
+#               "texto" es la descripción de EMOVA al momento de armar el mapa.
+#   sin_ubicar  equipos que EMOVA informa pero cuyo recorrido no se conoce.
+#   duda / dudas  lo que no se pudo determinar con las fuentes: REVISAR EN EL LUGAR.
+#   nota        aclaración sobre de dónde salió el dato.
+#   revisado    pasar a true cuando alguien que conoce la estación la validó.
+#
+# No figuran escaleras fijas, rampas ni desniveles: ninguna fuente los informa.
+
+linea: C
+cabeceras: [Retiro, Constitución]   # las estaciones van en este orden
+estaciones:
+
+  - nombre: "Retiro"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "No hay datos de cómo se va del andén al hall boletería: ¿están al mismo nivel? El texto de la escalera 18 dice 'hall boletería (andén central)'."
+      - "El andén también se conecta por ascensor con Retiro de la Línea E (figura en el mapa de la E)."
+    lugares:
+      anden: {tipo: "anden", sentidos: ["Constitución", "Retiro"], nombre: "Andén central (terminal)"}
+      hall: {tipo: "interior", nombre: "Hall boletería"}
+      salida_ffcc_mitre: {tipo: "calle", direccion: "Hall de la estación Retiro del tren Mitre (a nivel de calle)"}
+    conexiones:
+      - {equipo: "A1", medio: ascensor, entre: [hall, salida_ffcc_mitre],
+         texto: "Ascensor N°1: De hall FFCC Mitre a hall de boletería"}
+      - {equipo: "E18", medio: escalera_mecanica, desde: hall, hasta: salida_ffcc_mitre,
+         texto: "Escalera N°18: De hall boletería (andén central) a hall de Estación de FFCC"}
+      - {equipo: "E19", medio: escalera_mecanica, desde: salida_ffcc_mitre, hasta: hall,
+         texto: "Escalera N°19: De hall de Estación de FFCC a hall central"}
+
+  - nombre: "General San Martín"
+    nombre_api: "Gral. San Martín"
+    categoria_oficial: b
+    revisado: false
+    lugares:
+      anden_retiro: {tipo: "anden", sentidos: ["Retiro"]}
+      anden_constitucion: {tipo: "anden", sentidos: ["Constitución"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      salida_plaza: {tipo: "calle", direccion: "Plaza San Martín"}
+    conexiones:
+      - {equipo: "E16", medio: escalera_mecanica, desde: anden_constitucion, hasta: vestibulo,
+         texto: "Escalera N°16 : Andén sentido Constitución - Vestíbulo"}
+      - {equipo: "E17", medio: escalera_mecanica, desde: anden_retiro, hasta: vestibulo,
+         texto: "Escalera N°17: Andén sentido Retiro - Vestíbulo"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: vestibulo, hasta: salida_plaza,
+         texto: "Escalera N°1 (ext) : Vestíbulo - Plaza San Martín"}
+
+  - nombre: "Lavalle"
+    categoria_oficial: e
+    revisado: false
+    dudas:
+      - "Estación cerrada por obras al armar el mapa."
+    lugares:
+      anden_retiro: {tipo: "anden", sentidos: ["Retiro"]}
+      anden_constitucion: {tipo: "anden", sentidos: ["Constitución"]}
+      hall_sur: {tipo: "interior", nombre: "Hall boletería sur"}
+      pasillo_salida: {tipo: "interior", nombre: "Pasillo de salida"}
+      salida_vereda: {tipo: "calle", direccion: "Vereda (dirección sin dato)"}
+    conexiones:
+      - {equipo: "E14", medio: escalera_mecanica, desde: anden_retiro, hasta: hall_sur,
+         texto: "Escalera N°14: Cerrada por obras en la estación",
+         nota: "EMOVA reemplazó el texto por el aviso de cierre; el tramo sale de la tabla del pedido de informes."}
+      - {equipo: "E15", medio: escalera_mecanica, desde: anden_constitucion, hasta: hall_sur,
+         texto: "Escalera N°15: Cerrada por obras en la estación",
+         nota: "EMOVA reemplazó el texto por el aviso de cierre; el tramo sale de la tabla del pedido de informes."}
+      - {equipo: "EHall", medio: escalera_mecanica, desde: hall_sur, hasta: pasillo_salida,
+         texto: "Escalera Hall: Cerrada por obras en la estación",
+         nota: "EMOVA reemplazó el texto por el aviso de cierre; el tramo sale de la tabla del pedido de informes."}
+      - {equipo: "EExt", medio: escalera_mecanica, desde: pasillo_salida, hasta: salida_vereda,
+         texto: "Escalera Ext: Cerrada por obras en la estación",
+         nota: "EMOVA reemplazó el texto por el aviso de cierre; el tramo sale de la tabla del pedido de informes."}
+
+  - nombre: "Diagonal Norte"
+    categoria_oficial: d
+    revisado: false
+    dudas:
+      - "No sabemos si el hall de la salida Sarmiento es el mismo nivel que alguno de los dos vestíbulos."
+      - "Según el pedido de informes, los tres ascensores están fuera de servicio por vandalismo desde 2023/2025."
+    lugares:
+      anden_retiro: {tipo: "anden", sentidos: ["Retiro"]}
+      anden_constitucion: {tipo: "anden", sentidos: ["Constitución"]}
+      hall: {tipo: "interior", nombre: "Hall boletería / vestíbulo (salida Sarmiento)"}
+      vestibulo_norte: {tipo: "interior", nombre: "Vestíbulo norte y combinación con líneas B y D (a Catedral)"}
+      vestibulo_sur: {tipo: "interior", nombre: "Vestíbulo sur y combinación con Línea D (a Congreso de Tucumán)"}
+      pasillo_pace: {tipo: "interior", nombre: "Pasillo de combinación PACE"}
+      salida_sarmiento_861: {tipo: "calle", direccion: "Sarmiento 861"}
+    conexiones:
+      - {equipo: "A2", medio: ascensor, entre: [hall, anden_retiro],
+         texto: "Ascensor N°2: Vestíbulo - Andén sentido Retiro"}
+      - {equipo: "E22", medio: escalera_mecanica, desde: anden_retiro, hasta: hall,
+         texto: "Escalera N°22: Andén sentido Retiro - Hall Boletería"}
+      - {equipo: "E23", medio: escalera_mecanica, desde: hall, hasta: anden_retiro,
+         texto: "Escalera N°23: Hall Boletería - Andén sentido Retiro"}
+      - {equipo: "E20", medio: escalera_mecanica, desde: hall, hasta: salida_sarmiento_861,
+         texto: "Escalera N°20: Vestíbulo - Sarmiento 861"}
+      - {equipo: "E21", medio: escalera_mecanica, desde: salida_sarmiento_861, hasta: hall,
+         texto: "Escalera N°21: Sarmiento 861 - Vestíbulo"}
+      - {equipo: "E11", medio: escalera_mecanica, desde: anden_constitucion, hasta: vestibulo_norte,
+         texto: "Escalera N°11: Andén sentido Constitución- vestíbulo y combinación Líneas B y D (sentido a Catedral)"}
+      - {equipo: "E13", medio: escalera_mecanica, desde: anden_constitucion, hasta: vestibulo_sur,
+         texto: "Escalera N°13: Andén - vestíbulo y combinación Línea D (sentido a Congreso de Tucumán)"}
+      - {equipo: "E24", medio: escalera_mecanica, desde: anden_constitucion, hasta: pasillo_pace,
+         texto: "Escalera N°24: Ascendente andén Constitución a pasillo de combinación PACE"}
+    sin_ubicar:
+      - {equipo: "A1", texto: "Ascensor N°1: Cerrado por modernización de medio de elevación.", motivo: "Cerrado por modernización; EMOVA reemplazó el texto."}
+      - {equipo: "A3", texto: "Ascensor N°3: Cerrado por modernización de medio de elevación.", motivo: "Cerrado por modernización; EMOVA reemplazó el texto."}
+
+  - nombre: "Avenida de Mayo"
+    categoria_oficial: b
+    revisado: false
+    lugares:
+      anden_retiro: {tipo: "anden", sentidos: ["Retiro"]}
+      anden_constitucion: {tipo: "anden", sentidos: ["Constitución"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo y combinación con Línea A"}
+      salida_irigoyen_22: {tipo: "calle", direccion: "Bernardo de Irigoyen 22"}
+    conexiones:
+      - {equipo: "E10", medio: escalera_mecanica, desde: anden_retiro, hasta: vestibulo,
+         texto: "Escalera N°10: Andén sentido Retiro - Vestíbulo y combinación Línea A sentido a Plaza de Mayo"}
+      - {equipo: "E9", medio: escalera_mecanica, desde: anden_constitucion, hasta: vestibulo,
+         texto: "Escalera N°9: Andén sentido Constitución - Vestíbulo y combinación Línea A sentido a Plaza de Mayo"}
+      - {equipo: "EExt", medio: escalera_mecanica, desde: vestibulo, hasta: salida_irigoyen_22,
+         texto: "Escalera N°1 (ext.): Vestíbulo - Bernardo de Irigoyen 22"}
+
+  - nombre: "Mariano Moreno"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Ninguna fuente informa equipos que lleguen a la calle."
+    lugares:
+      anden_retiro: {tipo: "anden", sentidos: ["Retiro"]}
+      anden_constitucion: {tipo: "anden", sentidos: ["Constitución"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+    conexiones:
+      - {equipo: "E7", medio: escalera_mecanica, desde: anden_constitucion, hasta: vestibulo,
+         texto: "Escalera N°7: Andén sentido Constitución - Vestíbulo"}
+      - {equipo: "E8", medio: escalera_mecanica, desde: anden_retiro, hasta: vestibulo,
+         texto: "Escalera N°8: Andén sentido Retiro- vestíbulo"}
+
+  - nombre: "Independencia"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Ninguna fuente informa equipos que lleguen a la calle."
+    lugares:
+      anden_retiro: {tipo: "anden", sentidos: ["Retiro"]}
+      anden_constitucion: {tipo: "anden", sentidos: ["Constitución"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+    conexiones:
+      - {equipo: "E5", medio: escalera_mecanica, desde: anden_constitucion, hasta: vestibulo,
+         texto: "Escalera N°5: Andén sentido Constitución - Vestíbulo"}
+      - {equipo: "E6", medio: escalera_mecanica, desde: anden_retiro, hasta: vestibulo,
+         texto: "Escalera N°6: Andén sentido Retiro - Vestíbulo"}
+
+  - nombre: "San Juan"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Ninguna fuente informa equipos que lleguen a la calle."
+    lugares:
+      anden_retiro: {tipo: "anden", sentidos: ["Retiro"]}
+      anden_constitucion: {tipo: "anden", sentidos: ["Constitución"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+    conexiones:
+      - {equipo: "E3", medio: escalera_mecanica, desde: anden_constitucion, hasta: vestibulo,
+         texto: "Escalera N°3: Andén sentido Constitución - Vestíbulo"}
+      - {equipo: "E4", medio: escalera_mecanica, desde: anden_retiro, hasta: vestibulo,
+         texto: "Escalera N°4: Andén sentido Retiro.",
+         duda: "El texto de la API está incompleto; el destino sale del pedido de informes."}
+
+  - nombre: "Constitución"
+    categoria_oficial: a
+    revisado: false
+    dudas:
+      - "Terminal con tres andenes. Se asumió que los laterales (1 y 2) son de llegada y el central de salida, porque sus ascensores son 'solo salida' y 'solo ingreso'. CONFIRMAR."
+      - "Los ascensores 2, 3 y 4 también paran en el Centro de Trasbordo; se modeló solo el tramo andén–calle."
+    lugares:
+      anden_1: {tipo: "anden", sentidos: ["Constitución"], nombre: "Andén 1 (lateral, de llegada)", solo: llegada}
+      anden_2: {tipo: "anden", sentidos: ["Constitución"], nombre: "Andén 2 (lateral, de llegada)", solo: llegada}
+      anden_central: {tipo: "anden", sentidos: ["Retiro"], nombre: "Andén central (de salida)", solo: salida}
+      centro_trasbordo: {tipo: "interior", nombre: "Hall del Centro de Trasbordo"}
+      salida_garay_1150: {tipo: "calle", direccion: "Av. Garay 1150 (superficie del Centro de Trasbordo)"}
+    conexiones:
+      - {equipo: "A2", medio: ascensor, desde: anden_1, hasta: salida_garay_1150,
+         texto: "Ascensor N°2: Andén 1 - Centro de Trasbordo - Superficie Av. Garay 1150 (sólo salida)"}
+      - {equipo: "A4", medio: ascensor, desde: anden_2, hasta: salida_garay_1150,
+         texto: "Ascensor N°4: Andén 2 - Centro de Trasbordo superficie Av. Garay 1150 (sólo salida)"}
+      - {equipo: "A3", medio: ascensor, desde: salida_garay_1150, hasta: anden_central,
+         texto: "Ascensor N°3: Andén Central - Centro de Trasbordo superficie Av. Garay 1150 (sólo ingreso)"}
+      - {equipo: "A1", medio: ascensor, desde: centro_trasbordo, hasta: salida_garay_1150,
+         texto: "Ascensor N°1: Centro de Trasbordo - Superficie Av. Garay 1150 (sólo salida)"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: anden_1, hasta: centro_trasbordo,
+         texto: "Escalera N°1: Andén - Hall Centro de Trasbordo",
+         duda: "La API dice solo 'Andén'; no sabemos de cuál sale."}
+      - {equipo: "E2", medio: escalera_mecanica, desde: anden_2, hasta: centro_trasbordo,
+         texto: "Escalera N°2: Andén - Hall Centro de Trasbordo",
+         duda: "Ídem E1."}

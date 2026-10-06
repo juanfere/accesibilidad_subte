@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Modelo de la red</title>
+<meta name="description" content="Análisis: cómo modelar qué hace falta para salir a la calle en cada estación del subte, y primera versión para la Línea H." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #eef1f3;
+    --surface: #ffffff;
+    --surface-2: #f4f6f7;
+    --ink: #121a21;
+    --ink-secondary: #56636c;
+    --ink-muted: #8a959c;
+    --border: #d7dee3;
+    --accent: #0e7c86;
+    --accent-bg: #e2f1f2;
+    --good: #1c8a5e;
+    --good-bg: #e5f4ed;
+    --warning: #a9700f;
+    --warning-bg: #fbf0dd;
+    --critical: #b3352f;
+    --critical-bg: #fbe7e5;
+    --linea-a: #009499;
+    --linea-b: #d2261e;
+    --linea-c: #045ca7;
+    --linea-d: #158a4c;
+    --linea-e: #7a2d8c;
+    --linea-h: #b8860a;
+    --shadow: 0 1px 2px rgba(18, 26, 33, 0.06), 0 4px 14px rgba(18, 26, 33, 0.06);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0a1116;
+      --surface: #121a21;
+      --surface-2: #182028;
+      --ink: #e8edf0;
+      --ink-secondary: #a7b2b9;
+      --ink-muted: #6e7a81;
+      --border: #263139;
+      --accent: #3bc7d1;
+      --accent-bg: #113338;
+      --good: #33c289;
+      --good-bg: #10301f;
+      --warning: #e8ac3b;
+      --warning-bg: #35280f;
+      --critical: #e2695f;
+      --critical-bg: #391712;
+      --linea-a: #29a39f;
+      --linea-b: #e73023;
+      --linea-c: #2d7dd2;
+      --linea-d: #20975a;
+      --linea-e: #9f47c2;
+      --linea-h: #a37c0c;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 18px rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0a1116;
+    --surface: #121a21;
+    --surface-2: #182028;
+    --ink: #e8edf0;
+    --ink-secondary: #a7b2b9;
+    --ink-muted: #6e7a81;
+    --border: #263139;
+    --accent: #3bc7d1;
+    --accent-bg: #113338;
+    --good: #33c289;
+    --good-bg: #10301f;
+    --warning: #e8ac3b;
+    --warning-bg: #35280f;
+    --critical: #e2695f;
+    --critical-bg: #391712;
+    --linea-a: #29a39f;
+    --linea-b: #e73023;
+    --linea-c: #2d7dd2;
+    --linea-d: #20975a;
+    --linea-e: #9f47c2;
+    --linea-h: #a37c0c;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 18px rgba(0, 0, 0, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.6;
+    padding-inline: 16px;
+    padding-block: max(20px, env(safe-area-inset-top, 0px)) max(28px, env(safe-area-inset-bottom, 0px));
+  }
+
+  .wrap { max-width: 860px; margin: 0 auto; }
+
+  /* ---------- header ---------- */
+  .hero {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 28px 26px 24px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    position: relative;
+  }
+  .lineas-stripe { display: flex; height: 6px; position: absolute; top: 0; left: 0; right: 0; }
+  .lineas-stripe span { flex: 1; }
+  .eyebrow { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+  h1 { font-size: clamp(1.6rem, 4.5vw, 2.3rem); font-weight: 800; line-height: 1.15; margin: 6px 0 12px; letter-spacing: -0.01em; }
+  .lead { font-size: 1.08rem; color: var(--ink-secondary); margin: 0; max-width: 62ch; }
+
+  /* ---------- toc ---------- */
+  .toc { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
+  .toc a {
+    font-size: 0.8rem; font-weight: 600; text-decoration: none; color: var(--ink-secondary);
+    border: 1px solid var(--border); background: var(--surface-2);
+    padding: 4px 10px; border-radius: 999px;
+  }
+  .toc a:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* ---------- cards ---------- */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 22px 26px;
+    margin-bottom: 16px;
+  }
+  h2 { font-size: 1.3rem; font-weight: 800; margin: 0 0 10px; display: flex; align-items: baseline; gap: 10px; }
+  h2 .num { font-family: "IBM Plex Mono", monospace; font-size: 0.85rem; font-weight: 600; color: var(--accent); }
+  h3 { font-size: 1.02rem; font-weight: 700; margin: 18px 0 4px; }
+  p { margin: 0 0 10px; }
+  .muted { color: var(--ink-secondary); }
+  strong { font-weight: 700; }
+  a { color: var(--accent); }
+
+  ul { padding-left: 20px; margin: 0 0 10px; }
+  li { margin-bottom: 4px; }
+
+  .callout {
+    background: var(--accent-bg);
+    border-left: 4px solid var(--accent);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 14px 0 4px;
+  }
+  .callout p:last-child { margin: 0; }
+
+  /* ---------- pieces grid ---------- */
+  .pieces { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 14px; }
+  .piece {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .piece .icon { font-size: 1.5rem; line-height: 1; }
+  .piece .name { font-weight: 700; margin-top: 8px; }
+  .piece .what { font-size: 0.88rem; color: var(--ink-secondary); margin-top: 2px; }
+  .piece .svc { font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; color: var(--ink-muted); margin-top: 8px; }
+  .badge {
+    display: inline-block; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--good); background: var(--good-bg); border-radius: 999px; padding: 2px 8px; margin-top: 8px;
+  }
+
+  /* ---------- flujo (idea en una imagen) ---------- */
+  .flujo { list-style: none; padding: 0; margin: 14px 0; display: flex; gap: 26px; }
+  .flujo li {
+    flex: 1; position: relative; margin: 0;
+    background: var(--surface-2); border: 1px solid var(--border); border-top: 3px solid var(--accent);
+    border-radius: 10px; padding: 12px 10px; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .flujo li + li::before {
+    content: "→"; position: absolute; left: -21px; top: 50%; transform: translateY(-50%);
+    color: var(--accent); font-weight: 700; font-size: 1.1rem;
+  }
+  .flujo .icon { font-size: 1.6rem; line-height: 1.2; }
+  .flujo .name { font-weight: 700; font-size: 0.92rem; }
+  .flujo .what { font-size: 0.78rem; color: var(--ink-secondary); line-height: 1.35; }
+  @media (max-width: 640px) {
+    .flujo { flex-direction: column; gap: 22px; }
+    .flujo li + li::before { content: "↓"; left: 50%; top: -20px; transform: translateX(-50%); }
+  }
+
+  /* ---------- diagrams ---------- */
+  .diagram {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 10px;
+    margin: 14px 0;
+    overflow-x: auto;
+    text-align: center;
+  }
+  .diagram .mermaid { visibility: hidden; }
+  .diagram .mermaid[data-processed="true"] { visibility: visible; }
+  .diagram svg { max-width: 100%; height: auto; }
+  .diagram-caption { font-size: 0.8rem; color: var(--ink-muted); text-align: center; margin-top: -6px; }
+
+  /* ---------- tables ---------- */
+  table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-secondary); }
+  td:first-child { font-weight: 700; white-space: nowrap; }
+
+  /* ---------- tables of data model ---------- */
+  .tablas { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 12px; }
+  .tabla { border-radius: 10px; padding: 14px; border: 1px solid var(--border); background: var(--surface-2); }
+  .tabla .tag { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; border-radius: 999px; padding: 2px 8px; }
+  .tag.fijo { color: var(--accent); background: var(--accent-bg); }
+  .tag.crece { color: var(--warning); background: var(--warning-bg); }
+  .tabla .name { font-weight: 700; margin-top: 8px; }
+  .tabla .what { font-size: 0.88rem; color: var(--ink-secondary); }
+
+  /* ---------- status chips ---------- */
+  .chip { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+  .chip::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
+  .chip.good { color: var(--good); }
+  .chip.warning { color: var(--warning); }
+  .chip.critical { color: var(--critical); }
+
+  /* ---------- faq ---------- */
+  details { border-bottom: 1px solid var(--border); padding: 10px 0; }
+  details:last-child { border-bottom: 0; }
+  summary { cursor: pointer; font-weight: 700; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; font-family: "IBM Plex Mono", monospace; color: var(--accent); font-weight: 600; }
+  details[open] summary::after { content: "−"; }
+  details p { margin: 8px 0 0; color: var(--ink-secondary); }
+
+  dl.glosario { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; }
+  dl.glosario dt { font-weight: 700; }
+  dl.glosario dd { margin: 0; color: var(--ink-secondary); }
+
+  footer { text-align: center; font-size: 0.8rem; color: var(--ink-muted); padding: 8px 0 0; }
+
+  @media (max-width: 560px) {
+    .hero, .card { padding: 18px 16px; }
+    dl.glosario { grid-template-columns: 1fr; gap: 2px; }
+    dl.glosario dd { margin-bottom: 8px; }
+    td:first-child { white-space: normal; }
+  }
+
+  /* ---------- propios de esta página ---------- */
+  pre.salida {
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; margin: 12px 0; overflow-x: auto;
+    font-family: "IBM Plex Mono", monospace; font-size: 0.8rem; line-height: 1.5; color: var(--ink);
+  }
+  pre.salida .ok { color: var(--good); font-weight: 600; }
+  pre.salida .mal { color: var(--critical); font-weight: 600; }
+  pre.salida .gris { color: var(--ink-muted); }
+  code { font-family: "IBM Plex Mono", monospace; font-size: 0.88em; background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px; padding: 0 4px; }
+  .pasos { counter-reset: paso; list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 8px; }
+  .pasos li { counter-increment: paso; position: relative; padding: 10px 12px 10px 46px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; margin: 0; }
+  .pasos li::before {
+    content: counter(paso); position: absolute; left: 12px; top: 10px; width: 24px; height: 24px; border-radius: 50%;
+    background: var(--accent); color: var(--surface); font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 0.8rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .estado { font-weight: 700; white-space: nowrap; }
+  .estado.ok { color: var(--good); } .estado.mal { color: var(--critical); } .estado.duda { color: var(--warning); }
+  .tabla-wrap { overflow-x: auto; }
+  /* En pantallas angostas el diagrama se desliza de costado en vez de achicarse. */
+  .diagram svg { min-width: 560px; }
+  .diagram { text-align: left; }
+  td:first-child { white-space: normal; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="lineas-stripe" aria-hidden="true">
+      <span style="background:var(--linea-a)"></span><span style="background:var(--linea-b)"></span><span style="background:var(--linea-c)"></span><span style="background:var(--linea-d)"></span><span style="background:var(--linea-e)"></span><span style="background:var(--linea-h)"></span>
+    </div>
+    <div class="eyebrow">Accesibilidad del subte · análisis</div>
+    <h1>Un mapa de cómo salir a la calle en cada estación</h1>
+    <p class="lead">¿Se puede modelar, para cada andén, qué ascensores o escaleras hacen falta para llegar a la calle? Sí. Ya hay una primera versión de las seis líneas: <a href="red.html">recorrer el mapa de la red</a>.</p>
+    <nav class="toc" aria-label="Contenido">
+      <a href="#idea">La idea</a>
+      <a href="#fuentes">Las fuentes</a>
+      <a href="#modelo">El modelo</a>
+      <a href="#programa">El programa</a>
+      <a href="#hoy">Línea H hoy</a>
+      <a href="#pruebas">Pruebas</a>
+      <a href="#problemas">Problemas</a>
+      <a href="#revisar">A revisar</a>
+      <a href="#pasos">Próximos pasos</a>
+    </nav>
+  </header>
+
+  <section class="card" id="idea">
+    <h2><span class="num">01</span>La idea</h2>
+    <p>El dashboard ya dice qué ascensores y escaleras funcionan. Pero eso no alcanza para saber si una persona <strong>puede usar una estación</strong>: depende de si los equipos que funcionan forman un camino completo entre el andén y la calle.</p>
+    <p>Si en una estación hay que tomar dos ascensores seguidos y uno está roto, la estación no sirve, aunque el otro ande.</p>
+    <div class="callout">
+      <p>El objetivo es tener un <strong>mapa de cada estación</strong> que diga, para cada andén, qué equipos hay que usar para salir y por qué dirección se sale. Con ese mapa más el estado en vivo se puede responder <strong>“¿hoy puedo bajarme acá?”</strong> y, más adelante, <strong>“¿cómo voy de una estación a otra?”</strong>.</p>
+    </div>
+  </section>
+
+  <section class="card" id="fuentes">
+    <h2><span class="num">02</span>Qué aporta cada fuente</h2>
+    <div class="tabla-wrap"><table>
+      <thead><tr><th>Fuente</th><th>Qué sirve para el mapa</th></tr></thead>
+      <tbody>
+        <tr><td>Respuesta del Poder Ejecutivo<br><span class="muted" style="font-weight:400">Res. 145/2026</span></td><td>Tabla de las 296 escaleras mecánicas con su tramo (“Andén sur a hall boletería”), sentido y andén. Clasificación oficial de las 90 estaciones en categorías a) a e). Equipos parados hace años, con el motivo. <strong>No trae tabla de ascensores.</strong></td></tr>
+        <tr><td>Planilla de categorías</td><td>La misma clasificación a)–e), ya pasada a planilla.</td></tr>
+        <tr><td>API pública de EMOVA</td><td>Es la fuente principal. Cada uno de los 424 equipos dice de dónde a dónde va, muchas veces con la dirección de la salida (“Vestíbulo - Av. Corrientes 1811”).</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="card" id="modelo">
+    <h2><span class="num">03</span>Cómo es el modelo</h2>
+    <p>Cada estación se describe con dos listas:</p>
+    <ul>
+      <li><strong>Lugares:</strong> cada andén, los vestíbulos y entrepisos, cada salida a la calle (con su dirección) y los puntos de combinación con otras líneas.</li>
+      <li><strong>Conexiones:</strong> cada equipo une dos lugares. Los ascensores se usan en los dos sentidos; las escaleras mecánicas, en uno solo.</li>
+    </ul>
+    <div class="diagram"><pre class="mermaid">
+flowchart LR
+    AF["🚇 Andén a<br/>Facultad"]
+    AH["🚇 Andén a<br/>Hospitales"]
+    V["Vestíbulo"]
+    C1["🏙️ Calle<br/>Av. Jujuy 2179"]
+    C2["🏙️ Calle<br/>Av. Jujuy 2110"]
+    AF <-- "ascensor A2" --> V
+    AH <-- "ascensor A3" --> V
+    V <-- "ascensor A1" --> C1
+    AF -- "escalera E1" --> V
+    AH -- "escalera E2" --> V
+    V -- "escalera E3" --> C2
+    </pre></div>
+    <p class="diagram-caption">Estación Caseros (Línea H). Si el ascensor A3 no funciona, quien llega en silla de ruedas al andén a Hospitales no puede salir.</p>
+    <p>Cada conexión lleva el código que el equipo tiene en EMOVA (A1, E3…). Eso es lo que permite cruzar el mapa con el estado en vivo.</p>
+
+    <h3>Se trabaja por andén, no por estación</h3>
+    <div class="tablas">
+      <div class="tabla"><span class="tag fijo">Lo más común</span><div class="name">Dos andenes laterales</div><div class="what">Uno por sentido. Cada uno puede tener o no su ascensor: hay estaciones que sirven para ir pero no para volver.</div></div>
+      <div class="tabla"><span class="tag fijo">Ej: Plaza Italia</span><div class="name">Andén central</div><div class="what">Un solo andén que sirve a los dos sentidos.</div></div>
+      <div class="tabla"><span class="tag crece">Alberti y Pasco</span><div class="name">Un solo sentido</div><div class="what">Un único andén con un único sentido. Para ir hacia el otro lado no se puede usar esa estación.</div></div>
+      <div class="tabla"><span class="tag fijo">Cabeceras</span><div class="name">Terminales</div><div class="what">Se usa un solo andén para llegar y para salir.</div></div>
+    </div>
+
+    <h3>El resultado depende de la persona</h3>
+    <div class="tabla-wrap"><table>
+      <thead><tr><th>Perfil</th><th>Puede usar</th></tr></thead>
+      <tbody>
+        <tr><td>Silla de ruedas</td><td>Ascensores, salvaescaleras y caminos rodantes.</td></tr>
+        <tr><td>No puede usar escaleras fijas</td><td>Lo anterior, más escaleras mecánicas en el sentido en que andan.</td></tr>
+      </tbody>
+    </table></div>
+    <p class="muted" style="margin-top:10px">Se pueden agregar otros perfiles (cochecito, valijas, etc.).</p>
+  </section>
+
+  <section class="card" id="programa">
+    <h2><span class="num">04</span>Qué hace el programa</h2>
+    <p>El mapa de las estaciones es un archivo de datos: por sí solo no responde nada. El programa (<code>red.py</code>) es el que <strong>lee ese mapa y busca caminos</strong>. Funciona como un buscador de recorridos, pero dentro de cada estación.</p>
+    <p>Para cada andén de cada estación hace esto:</p>
+    <ol class="pasos">
+      <li><strong>Mira qué puede usar la persona.</strong> Si va en silla de ruedas, descarta todas las escaleras mecánicas y se queda solo con ascensores y salvaescaleras.</li>
+      <li><strong>Saca los equipos que hoy no funcionan</strong> (opcional). Le pregunta a EMOVA en ese momento cuáles están fuera de servicio y los descarta también.</li>
+      <li><strong>Busca un camino para salir:</strong> parte del andén y va probando, equipo por equipo, hasta llegar a alguna salida a la calle. Si hay varios caminos, elige el que usa menos equipos.</li>
+      <li><strong>Busca un camino para entrar:</strong> lo mismo, pero desde la calle hacia el andén. Puede dar distinto, porque las escaleras mecánicas van en un solo sentido.</li>
+      <li><strong>Informa el resultado:</strong> qué equipos hay que tomar y por qué dirección se sale, o avisa que no hay camino.</li>
+    </ol>
+    <p>Así se ve lo que responde para una estación donde todo funciona:</p>
+<pre class="salida">Las Heras
+  silla de ruedas
+    andén a Facultad de Derecho
+      salir:  <span class="ok">ascensor A4 + ascensor A2 + ascensor A1</span>  ·  Av. Pueyrredón 2001
+      entrar: <span class="ok">ascensor A1 + ascensor A2 + ascensor A4</span>  ·  Av. Pueyrredón 2001</pre>
+    <p>Y así cuando un equipo necesario está roto:</p>
+<pre class="salida">Caseros   <span class="gris">[fuera de servicio: A3]</span>
+  silla de ruedas
+    andén a Facultad de Derecho
+      salir:  <span class="ok">ascensor A2 + ascensor A1</span>  ·  Av. Jujuy 2179
+    andén a Hospitales
+      salir:  <span class="mal">NO HAY CAMINO</span></pre>
+    <div class="callout">
+      <p><strong>En resumen:</strong> el dashboard dice “el ascensor A3 de Caseros no funciona”. El programa traduce eso a lo que le importa a la persona: “hoy no podés bajarte en Caseros si venís desde Facultad de Derecho”.</p>
+    </div>
+    <p class="muted">Lo que el programa calcula para cada estación, suponiendo que todo funciona, se puede recorrer en <a href="red.html">el mapa de la red</a>. Todavía no calcula viajes entre estaciones.</p>
+  </section>
+
+  <section class="card" id="hoy">
+    <h2><span class="num">05</span>Línea H: qué respondió</h2>
+    <p>Resultado para una persona en silla de ruedas, con el estado que informaba EMOVA el <strong>5 de octubre de 2026</strong>:</p>
+    <div class="tabla-wrap"><table>
+      <thead><tr><th>Estación</th><th>Situación</th><th>Por qué</th></tr></thead>
+      <tbody>
+        <tr><td>Humberto 1°</td><td><span class="estado mal">Sin acceso</span></td><td>Ascensores A2 y A3 fuera de servicio: no se llega a ningún andén.</td></tr>
+        <tr><td>Parque Patricios</td><td><span class="estado mal">Sin acceso</span></td><td>Ascensores A1 y A3 fuera de servicio.</td></tr>
+        <tr><td>Caseros</td><td><span class="estado mal">Acceso parcial</span></td><td>Ascensor A3 fuera de servicio: no se puede usar el andén a Hospitales.</td></tr>
+        <tr><td>Inclán</td><td><span class="estado duda">Dudoso</span></td><td>Según los textos no hay camino, pero es una duda del mapa y no un dato (ver “A revisar”).</td></tr>
+        <tr><td>Las otras 8</td><td><span class="estado ok">Con acceso</span></td><td>Hay camino en todos los andenes.</td></tr>
+      </tbody>
+    </table></div>
+    <p class="muted" style="margin-top:10px">El mapa de la H tiene sus 12 estaciones y los 118 equipos que informa EMOVA. Es un borrador: se armó leyendo los textos, sin ir a las estaciones.</p>
+  </section>
+
+  <section class="card" id="pruebas">
+    <h2><span class="num">06</span>Dos pruebas sobre toda la red</h2>
+    <h3>¿Se pueden leer automáticamente los textos de EMOVA?</h3>
+    <p>Un primer intento resolvió <strong>343 de los 424 equipos (81%)</strong>. El resto hay que verlo a mano: textos con formato irregular o equipos cerrados por obra.</p>
+    <h3>¿Coincide con la clasificación oficial?</h3>
+    <p>Se calculó en qué estaciones se llega del andén a la calle usando solo ascensores, y se comparó con las 37 que el Gobierno clasifica como “accesibles de forma integral”. <strong>Coinciden 32.</strong> Las diferencias son justamente los casos que el mapa necesita captar:</p>
+    <ul>
+      <li><strong>Castro Barros y Loria:</strong> tienen ascensor en un solo andén. Sirven para un sentido de viaje y no para el otro.</li>
+      <li><strong>Catedral:</strong> un ascensor es “solo ingreso” y el otro “solo hacia el exterior”.</li>
+      <li><strong>Leandro N. Alem y Pueyrredón (B y D):</strong> son accesibles “por combinación” con otra línea; no tienen ascensor propio.</li>
+      <li><strong>Tribunales:</strong> figura como accesible, pero su ascensor está cerrado por obras.</li>
+      <li><strong>Humberto 1°:</strong> es accesible; la lectura automática no entendió sus textos.</li>
+    </ul>
+  </section>
+
+  <section class="card" id="problemas">
+    <h2><span class="num">07</span>Problemas encontrados</h2>
+    <details open><summary>Los textos de EMOVA se pierden</summary>
+      <p>Cuando cierran un equipo, reemplazan la descripción por “Cerrada por obras” (hoy pasa en Tribunales, Lavalle y Juan Manuel de Rosas). Por eso el mapa guarda su propia copia del texto original.</p></details>
+    <details><summary>Escaleras fijas, rampas y desniveles no figuran en ninguna fuente</summary>
+      <p>Para silla de ruedas no cambia el resultado principal (sin ascensor no hay camino), pero no podemos saber si hay escalones entre un vestíbulo y su ascensor.</p></details>
+    <details><summary>Los nombres de los niveles son inconsistentes</summary>
+      <p>El mismo lugar aparece como “vestíbulo”, “hall” o “entrepiso” según el equipo. Hay que interpretar estación por estación.</p></details>
+    <details><summary>Las fuentes a veces se contradicen</summary>
+      <p>En Once (Línea H) la numeración de las escaleras de la API y la del pedido de informes no coinciden.</p></details>
+    <details><summary>Las combinaciones entre líneas están descriptas a medias</summary>
+      <p>Habrá que completarlas a mano.</p></details>
+    <details><summary>5 estaciones no aparecen en la API</summary>
+      <p>No tienen ningún equipo: Alberti, Pasco, Río de Janeiro, Scalabrini Ortiz y Plaza de los Virreyes. Se agregan a mano como estaciones sin acceso.</p></details>
+  </section>
+
+  <section class="card" id="revisar">
+    <h2><span class="num">08</span>Lo que hay que revisar de la Línea H</h2>
+    <p>El mapa tiene <strong>22 dudas anotadas</strong>, cada una en su estación. Hace falta alguien que conozca las estaciones para cerrarlas. Las más importantes:</p>
+    <div class="tabla-wrap"><table>
+      <thead><tr><th>Estación</th><th>Duda</th></tr></thead>
+      <tbody>
+        <tr><td>Inclán</td><td>Según los textos, los ascensores de andén llegan a una boletería y el ascensor a la calle sale de la otra. Seguramente es un error de los textos o las boleterías están unidas a nivel.</td></tr>
+        <tr><td>Santa Fe</td><td>Tiene dos sectores y siete ascensores; no queda claro qué ascensor llega a qué nivel, ni cómo se llega al pasillo de combinación con la Línea D.</td></tr>
+        <tr><td>Once</td><td>La API y el pedido de informes se contradicen en la numeración de las escaleras. Se siguió la API.</td></tr>
+        <tr><td>Córdoba y Corrientes</td><td>Se asumió que “entrepiso” y “vestíbulo” son el mismo nivel que el hall de donde sale el ascensor a la calle.</td></tr>
+        <tr><td>Facultad de Derecho y Hospitales</td><td>Son terminales: confirmar cuál es el andén que se usa.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="card" id="pasos">
+    <h2><span class="num">09</span>Próximos pasos</h2>
+    <ol class="pasos">
+      <li><strong>Revisar el mapa</strong> con gente que conozca las estaciones y cerrar las dudas. Las seis líneas ya están hechas, con 100 dudas anotadas.</li>
+      <li><strong>Unir las estaciones:</strong> el viaje en tren entre estaciones vecinas y las combinaciones entre líneas. Con eso se puede calcular un recorrido completo de una estación a otra.</li>
+      <li><strong>Sumar el estado en vivo</strong> al mapa de la red, para ver a qué estaciones se puede llegar hoy.</li>
+    </ol>
+  </section>
+
+  <footer>
+    Fuentes: API pública de accesibilidad de EMOVA · Resolución 145/2026 de la Legislatura porteña ·
+    <a href="https://github.com/juanfere/accesibilidad_subte" target="_blank" rel="noopener">código</a>
+  </footer>
+</div>
+
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+
+  const css = getComputedStyle(document.documentElement);
+  const v = (name) => css.getPropertyValue(name).trim();
+
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: "base",
+    fontFamily: "Archivo, system-ui, sans-serif",
+    themeVariables: {
+      darkMode: css.getPropertyValue("color-scheme").trim() === "dark",
+      background: v("--surface-2"),
+      fontFamily: "Archivo, system-ui, sans-serif",
+      fontSize: "15px",
+      primaryColor: v("--surface"),
+      primaryTextColor: v("--ink"),
+      primaryBorderColor: v("--accent"),
+      secondaryColor: v("--accent-bg"),
+      tertiaryColor: v("--surface-2"),
+      lineColor: v("--ink-muted"),
+      textColor: v("--ink"),
+      clusterBkg: v("--surface"),
+      clusterBorder: v("--border"),
+      edgeLabelBackground: v("--surface-2"),
+      actorBkg: v("--surface"),
+      actorBorder: v("--accent"),
+      actorTextColor: v("--ink"),
+      signalColor: v("--ink-secondary"),
+      signalTextColor: v("--ink"),
+      noteBkgColor: v("--warning-bg"),
+      noteBorderColor: v("--warning"),
+      noteTextColor: v("--ink"),
+      labelBoxBkgColor: v("--accent-bg"),
+      labelBoxBorderColor: v("--accent"),
+      labelTextColor: v("--ink"),
+      loopTextColor: v("--ink"),
+      activationBkgColor: v("--accent-bg"),
+      sequenceNumberColor: v("--surface")
+    },
+    flowchart: { curve: "basis", htmlLabels: true },
+    sequence: { mirrorActors: false }
+  });
+
+  // Se renderiza uno por uno con id propio: mermaid.run() arma los ids con
+  // Date.now() y dos diagramas en el mismo milisegundo se pisaban.
+  const diagramas = document.querySelectorAll(".diagram .mermaid");
+  for (const [i, el] of diagramas.entries()) {
+    try {
+      // innerHTML (no textContent): el navegador convierte los <br/> de las
+      // etiquetas en elementos y textContent los perdería.
+      const src = el.innerHTML.replace(/&gt;/g, ">").replace(/&lt;/g, "<").replace(/&amp;/g, "&");
+      const { svg } = await mermaid.render("diagrama-" + i, src);
+      el.innerHTML = svg;
+    } catch (err) {
+      // Si falla, queda el texto crudo en vez de un hueco vacío.
+    }
+    el.dataset.processed = "true";
+  }
+</script>
+</body>
+</html>

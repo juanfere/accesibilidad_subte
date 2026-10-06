@@ -1,0 +1,453 @@
+# Modelo de accesibilidad de la Línea H — BORRADOR A REVISAR
+#
+# Describe, para cada estación, los LUGARES (andenes, vestíbulos, salidas a la
+# calle, puntos de combinación) y las CONEXIONES entre ellos que dependen de un
+# medio de elevación. Se armó a mano leyendo los textos de la API de EMOVA y la
+# tabla de escaleras del pedido de informes (Res. 145/2026). Ver analisis.md.
+#
+# Cómo leerlo:
+#   lugares     tipo anden: "sentidos" = hacia dónde van los trenes que paran ahí
+#               (dos sentidos = andén central o terminal; ninguno = fuera de uso).
+#               "solo: llegada" / "solo: salida" = andén de terminal donde solo
+#               se baja o solo se sube al tren.
+#               tipo combinacion: si tiene "lugar", es ese mismo lugar de la
+#               otra estación (permite llegar a la calle a través de otra línea).
+#   conexiones  "equipo" es el código del medio en la API de EMOVA (campo nombre),
+#               que es lo que permite cruzarlo con el estado en vivo.
+#               "entre": se recorre en cualquier sentido (2 o más paradas).
+#               "desde" -> "hasta": se recorre en un solo sentido.
+#               "texto" es la descripción de EMOVA al momento de armar el mapa.
+#   sin_ubicar  equipos que EMOVA informa pero cuyo recorrido no se conoce.
+#   duda / dudas  lo que no se pudo determinar con las fuentes: REVISAR EN EL LUGAR.
+#   nota        aclaración sobre de dónde salió el dato.
+#   revisado    pasar a true cuando alguien que conoce la estación la validó.
+#
+# No figuran escaleras fijas, rampas ni desniveles: ninguna fuente los informa.
+
+linea: H
+cabeceras: [Facultad de Derecho, Hospitales]   # las estaciones van en este orden
+estaciones:
+
+  - nombre: "Facultad de Derecho"
+    categoria_oficial: a
+    revisado: false
+    dudas:
+      - "Terminal: se modela un solo andén en uso, para llegadas y salidas. Confirmar que siempre es el mismo."
+    lugares:
+      anden: {tipo: "anden", sentidos: ["Hospitales", "Facultad de Derecho"], nombre: "Andén operativo (terminal)"}
+      anden_no_operativo: {tipo: "anden", sentidos: [], nombre: "Andén no operativo"}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo"}
+      salida_figueroa_alcorta_2201: {tipo: "calle", direccion: "Av. Figueroa Alcorta 2201 (Facultad de Derecho)"}
+    conexiones:
+      - {equipo: "A2", medio: ascensor, entre: [anden, vestibulo],
+         texto: "Ascensor N°2: Andén - vestíbulo"}
+      - {equipo: "A1", medio: ascensor, entre: [anden_no_operativo, vestibulo],
+         texto: "Ascensor N°1: Andén no operativo - vestíbulo"}
+      - {equipo: "A3", medio: ascensor, entre: [vestibulo, salida_figueroa_alcorta_2201],
+         texto: "Ascensor N°3: Vestíbulo - Facultad de Derecho Av. Figueroa Alcorta 2201"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: anden, hasta: vestibulo,
+         texto: "Escalera N°2: Andén - vestíbulo"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: anden_no_operativo, hasta: vestibulo,
+         texto: "Escalera N°1: Andén no operativo - vestíbulo"}
+
+  - nombre: "Las Heras"
+    categoria_oficial: a
+    revisado: false
+    lugares:
+      anden_facultad: {tipo: "anden", sentidos: ["Facultad de Derecho"]}
+      anden_hospitales: {tipo: "anden", sentidos: ["Hospitales"]}
+      entrepiso: {tipo: "interior", nombre: "Entrepiso"}
+      hall: {tipo: "interior", nombre: "Hall boletería"}
+      salida_pueyrredon_2001: {tipo: "calle", direccion: "Av. Pueyrredón 2001 (y Av. Las Heras)"}
+      salida_plaza_mitre: {tipo: "calle", direccion: "Plaza Tte. Gral. Mitre (Av. Las Heras y Av. Pueyrredón)"}
+    conexiones:
+      - {equipo: "A4", medio: ascensor, entre: [anden_facultad, entrepiso],
+         texto: "Ascensor N°4: Entrepiso - Andén sentido Facultad"}
+      - {equipo: "A3", medio: ascensor, entre: [anden_hospitales, entrepiso],
+         texto: "Ascensor N°3: Entrepiso - Andén sentido Hospitales"}
+      - {equipo: "A2", medio: ascensor, entre: [entrepiso, hall],
+         texto: "Ascensor N°2: Entrepiso - Hall Boletería"}
+      - {equipo: "A1", medio: ascensor, entre: [hall, salida_pueyrredon_2001],
+         texto: "Ascensor N°1: Hall Boletería - Av. Pueyrredón 2001 (y Av. Las Heras)"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: anden_facultad, hasta: entrepiso,
+         texto: "Escalera N°1: Andén sentido Facultad - Entrepiso"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: entrepiso, hasta: anden_facultad,
+         texto: "Escalera N°2: Entrepiso - Andén sentido Facultad"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: anden_hospitales, hasta: entrepiso,
+         texto: "Escalera N°3: Andén sentido Hospitales - Entrepiso"}
+      - {equipo: "E4", medio: escalera_mecanica, desde: entrepiso, hasta: anden_hospitales,
+         texto: "Escalera N°4: Entrepiso - Andén sentido Hospitales"}
+      - {equipo: "E5", medio: escalera_mecanica, desde: entrepiso, hasta: hall,
+         texto: "Escalera N°5: Entrepiso - Hall Boletería"}
+      - {equipo: "E6", medio: escalera_mecanica, desde: hall, hasta: salida_plaza_mitre,
+         texto: "Escalera N°6: Hall Boletería - Plaza Teniente General Mitre (Av. Las Heras y Av. Pueyrredón)"}
+
+  - nombre: "Santa Fe - Carlos Jáuregui"
+    categoria_oficial: a
+    revisado: false
+    dudas:
+      - "No sabemos cómo se llega al pasillo de combinación con la D desde los andenes o el hall (no hay equipo que lo conecte en las fuentes)."
+      - "Estación con dos sectores (norte y sur): revisar en el lugar qué ascensor llega a cada nivel."
+    lugares:
+      anden_facultad: {tipo: "anden", sentidos: ["Facultad de Derecho"]}
+      anden_hospitales: {tipo: "anden", sentidos: ["Hospitales"]}
+      entrepiso_sur: {tipo: "interior", nombre: "Entrepiso sur"}
+      hall_sur: {tipo: "interior", nombre: "Hall boletería sur / vestíbulo"}
+      vestibulo_norte: {tipo: "interior", nombre: "Vestíbulo norte"}
+      entrepiso_salida_3: {tipo: "interior", nombre: "Entrepiso de la salida 3"}
+      pasillo_combinacion: {tipo: "interior", nombre: "Pasillo de combinación con Línea D"}
+      salida_santa_fe_2409: {tipo: "calle", direccion: "Av. Santa Fe 2409"}
+      salida_santa_fe_2487: {tipo: "calle", direccion: "Av. Santa Fe 2487 (salida 3)"}
+      salida_pueyrredon_1500: {tipo: "calle", direccion: "Av. Pueyrredón 1500"}
+      comb_d: {tipo: "combinacion", linea: "D", estacion: "Pueyrredón", lugar: "anden", nombre: "Andén central de Pueyrredón (Línea D)"}
+    conexiones:
+      - {equipo: "A3", medio: ascensor, entre: [anden_facultad, entrepiso_sur],
+         texto: "Ascensor N°3: Entrepiso - Andén sentido Facultad"}
+      - {equipo: "A2", medio: ascensor, entre: [anden_hospitales, entrepiso_sur],
+         texto: "Ascensor N°4: Entrepiso - Andén sentido Hospitales"}
+      - {equipo: "A4", medio: ascensor, entre: [anden_hospitales, hall_sur],
+         texto: "Ascensor N°2: Hall Boletería - Andén sentido Hospitales"}
+      - {equipo: "A1", medio: ascensor, entre: [anden_facultad, hall_sur],
+         texto: "Ascensor N°1: Entrepiso - Andén",
+         duda: "La API dice solo 'Entrepiso - Andén': no aclara qué andén ni si llega al hall."}
+      - {equipo: "A5", medio: ascensor, entre: [hall_sur, salida_santa_fe_2409],
+         texto: "Ascensor N°5: Vestíbulo - Av. Santa Fe 2409",
+         duda: "No sabemos de qué vestíbulo sale (¿norte o sur?)."}
+      - {equipo: "A6", medio: ascensor, entre: [hall_sur, salida_pueyrredon_1500],
+         texto: "Ascensor N°6: Vestíbulo - Av. Pueyrredón 1500"}
+      - {equipo: "A7", medio: ascensor, entre: [pasillo_combinacion, comb_d],
+         texto: "Ascensor N°7: Pasillo combinación - Andén Línea D"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: anden_facultad, hasta: entrepiso_sur,
+         texto: "Escalera N°1: Andén sentido Facultad - Entrepiso"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: entrepiso_sur, hasta: anden_hospitales,
+         texto: "Escalera N°2: Entrepiso - Andén sentido Hospitales",
+         duda: "El PDF dice descendente; el campo 'sentido' de la API dice ascendente."}
+      - {equipo: "E3", medio: escalera_mecanica, desde: anden_facultad, hasta: vestibulo_norte,
+         texto: "Escalera N°3: Andén sentido Facultad - vestíbulo"}
+      - {equipo: "E4", medio: escalera_mecanica, desde: anden_hospitales, hasta: vestibulo_norte,
+         texto: "Escalera N°4: Andén sentido Hospitales - Vestíbulo"}
+      - {equipo: "E5", medio: escalera_mecanica, desde: vestibulo_norte, hasta: entrepiso_salida_3,
+         texto: "Escalera N°5: Vestíbulo - Entrepiso (Salida N° 3)"}
+      - {equipo: "E6", medio: escalera_mecanica, desde: entrepiso_salida_3, hasta: salida_santa_fe_2487,
+         texto: "Escalera N°6: Entrepiso (salida 3) - Av. Santa Fe 2487"}
+      - {equipo: "E7", medio: escalera_mecanica, desde: entrepiso_sur, hasta: hall_sur,
+         texto: "Escalera N°7: Entrepiso - nivel boletería"}
+      - {equipo: "E8", medio: escalera_mecanica, desde: hall_sur, hasta: salida_pueyrredon_1500,
+         texto: "Escalera N°8: Vestíbulo - Av. Pueyrredón 1500"}
+      - {equipo: "E9", medio: escalera_mecanica, desde: pasillo_combinacion, hasta: comb_d,
+         texto: "Escalera N°9: Pasillo de combinación - Andén Pueyrredón Línea D"}
+
+  - nombre: "Córdoba"
+    categoria_oficial: a
+    revisado: false
+    lugares:
+      anden_facultad: {tipo: "anden", sentidos: ["Facultad de Derecho"]}
+      anden_hospitales: {tipo: "anden", sentidos: ["Hospitales"]}
+      hall: {tipo: "interior", nombre: "Hall boletería / vestíbulo"}
+      entrepiso_salida_1: {tipo: "interior", nombre: "Entrepiso de la salida 1"}
+      entrepiso_salida_2: {tipo: "interior", nombre: "Entrepiso de la salida 2"}
+      salida_pueyrredon_980: {tipo: "calle", direccion: "Av. Pueyrredón 980 (salida 1)"}
+      salida_cordoba_2582: {tipo: "calle", direccion: "Av. Córdoba 2582 (salida 2)"}
+    conexiones:
+      - {equipo: "A1", medio: ascensor, entre: [anden_facultad, hall],
+         texto: "Ascensor N°1: Andén sentido Facultad - Entrepiso",
+         duda: "La API dice 'Andén - Entrepiso'; asumimos que es el nivel del hall, de donde sale el ascensor a la calle."}
+      - {equipo: "A2", medio: ascensor, entre: [anden_hospitales, hall],
+         texto: "Ascensor N°2: Andén sentido Hospitales - Entrepiso",
+         duda: "Ídem A1."}
+      - {equipo: "A3", medio: ascensor, entre: [hall, salida_pueyrredon_980],
+         texto: "Ascensor N°3: Vestíbulo - Av. Pueyrredón 980"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: anden_facultad, hasta: hall,
+         texto: "Escalera N°1: Andén sentido Facultad - Vestíbulo"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: anden_hospitales, hasta: hall,
+         texto: "Escalera N°2: Andén sentido Hospitales - Vestíbulo"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: hall, hasta: entrepiso_salida_1,
+         texto: "Escalera N°3: Hall boletería - Entrepiso (salida n° 1)"}
+      - {equipo: "E4", medio: escalera_mecanica, desde: entrepiso_salida_1, hasta: salida_pueyrredon_980,
+         texto: "Escalera N°4: Entrepiso - Av. Pueyrredón 980 (Salida N°1)"}
+      - {equipo: "E5", medio: escalera_mecanica, desde: hall, hasta: entrepiso_salida_2,
+         texto: "Escalera N°5: Hall boletería - entrepiso (salida 2)"}
+      - {equipo: "E6", medio: escalera_mecanica, desde: entrepiso_salida_2, hasta: salida_cordoba_2582,
+         texto: "Escalera N°6: Entrepiso - Av. Córdoba 2582 (salida N° 2)"}
+
+  - nombre: "Corrientes"
+    categoria_oficial: a
+    revisado: false
+    dudas:
+      - "Qué escalera de andén va al entrepiso norte y cuál al sur sale del PDF (N° 7 y 10 sur; 8 y 9 norte): la API no lo distingue."
+      - "Se asumió que los ascensores de combinación llegan a los andenes de Pueyrredón (Línea B). Los textos dicen 'entrepiso de combinación' y 'combinación': CONFIRMAR."
+    lugares:
+      anden_facultad: {tipo: "anden", sentidos: ["Facultad de Derecho"]}
+      anden_hospitales: {tipo: "anden", sentidos: ["Hospitales"]}
+      entrepiso_norte: {tipo: "interior", nombre: "Entrepiso norte"}
+      hall: {tipo: "interior", nombre: "Hall boletería (entrepiso sur)"}
+      vestibulo_b: {tipo: "interior", nombre: "Vestíbulo compartido con Línea B"}
+      salida_pueyrredon_562: {tipo: "calle", direccion: "Av. Pueyrredón 562"}
+      salida_pueyrredon_585: {tipo: "calle", direccion: "Av. Pueyrredón 585"}
+      salida_pueyrredon_576: {tipo: "calle", direccion: "Av. Pueyrredón 576"}
+      comb_b_alem: {tipo: "combinacion", linea: "B", estacion: "Pueyrredón", lugar: "anden_alem", nombre: "Entrepiso de combinación con Línea B, sentido Alem"}
+      comb_b_rosas: {tipo: "combinacion", linea: "B", estacion: "Pueyrredón", lugar: "anden_rosas", nombre: "Combinación con Línea B, sentido Rosas"}
+      comb_b: {tipo: "combinacion", linea: "B", estacion: "Pueyrredón", nombre: "Combinación con Línea B (caminos rodantes)"}
+    conexiones:
+      - {equipo: "A1", medio: ascensor, entre: [anden_facultad, hall],
+         texto: "Ascensor N°2: Andén - vestíbulo",
+         duda: "La API dice 'Andén - vestíbulo'; asumimos el hall boletería, de donde sale el ascensor a la calle."}
+      - {equipo: "A3", medio: ascensor, entre: [anden_hospitales, hall],
+         texto: "Ascensor N°3: Andén - vestíbulo",
+         duda: "Ídem A1."}
+      - {equipo: "A5", medio: ascensor, entre: [hall, salida_pueyrredon_562],
+         texto: "Ascensor N° 1: Hall Boletería – Av. Pueyrredón 562"}
+      - {equipo: "A2", medio: ascensor, entre: [anden_facultad, comb_b_alem],
+         texto: "Ascensor N°4: Andén a Facultad – Entrepiso combinación L/B sentido Alem"}
+      - {equipo: "A4", medio: ascensor, entre: [anden_hospitales, comb_b_alem],
+         texto: "Ascensor N°5:Andén a Hospitales – Entrepiso combinación L/B sentido Alem"}
+      - {equipo: "A6", medio: ascensor, entre: [hall, comb_b_rosas],
+         texto: "Ascensor N°6: Hall - Combinación con Línea B sentido a J.M. de Rosas"}
+      - {equipo: "C3", medio: camino_rodante, desde: hall, hasta: comb_b,
+         texto: "Camino rodante N°3: Hall Boletería - Combinación con Línea B"}
+      - {equipo: "C4", medio: camino_rodante, desde: comb_b, hasta: hall,
+         texto: "Camino rodante N°4: Línea B - Hall Boletería"}
+      - {equipo: "E9", medio: escalera_mecanica, desde: anden_facultad, hasta: entrepiso_norte,
+         texto: "Escalera N°9: Andén sentido Facultad - Entrepiso"}
+      - {equipo: "E7", medio: escalera_mecanica, desde: anden_facultad, hasta: hall,
+         texto: "Escalera N°7: Andén sentido Facultad - Entrepiso"}
+      - {equipo: "E8", medio: escalera_mecanica, desde: anden_hospitales, hasta: entrepiso_norte,
+         texto: "Escalera N°8: Andén sentido Hospitales - Entrepiso"}
+      - {equipo: "E10", medio: escalera_mecanica, desde: anden_hospitales, hasta: hall,
+         texto: "Escalera N°10: Andén sentido Hospitales - Entrepiso"}
+      - {equipo: "E6", medio: escalera_mecanica, desde: entrepiso_norte, hasta: vestibulo_b,
+         texto: "Escalera N°6: Entrepiso - Vestíbulo"}
+      - {equipo: "E5", medio: escalera_mecanica, desde: vestibulo_b, hasta: entrepiso_norte,
+         texto: "Escalera N°5: Vestíbulo - Entrepiso"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: hall, hasta: vestibulo_b,
+         texto: "Escalera N°3: Hall Boletería - Vestíbulo Línea B"}
+      - {equipo: "E4", medio: escalera_mecanica, desde: vestibulo_b, hasta: hall,
+         texto: "Escalera N°4: Vestíbulo de L/B - Hall boletería"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: vestibulo_b, hasta: salida_pueyrredon_585,
+         texto: "Escalera N°1: Vestíbulo - Av. Pueyrredón 585"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: vestibulo_b, hasta: salida_pueyrredon_576,
+         texto: "Escalera N°2: Vestíbulo - Av. Pueyrredón 576"}
+
+  - nombre: "Once - 30 de Diciembre"
+    nombre_api: "Once – 30 de Diciembre"
+    categoria_oficial: a
+    revisado: false
+    dudas:
+      - "LA API Y EL PDF SE CONTRADICEN en la numeración de casi todas las escaleras de esta estación. Se siguió la API (es la que da el estado en vivo). Revisar en el lugar."
+    lugares:
+      anden_facultad: {tipo: "anden", sentidos: ["Facultad de Derecho"]}
+      anden_hospitales: {tipo: "anden", sentidos: ["Hospitales"]}
+      entrepiso: {tipo: "interior", nombre: "Entrepiso (norte y sur, sin distinguir)"}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo central / hall boletería"}
+      entrepiso_salida: {tipo: "interior", nombre: "Entrepiso de salida"}
+      salida_pueyrredon_71: {tipo: "calle", direccion: "Av. Pueyrredón 71"}
+      salida_pueyrredon_mitre: {tipo: "calle", direccion: "Av. Pueyrredón esquina Bartolomé Mitre (Plaza Miserere)"}
+      comb_sarmiento_a: {tipo: "combinacion", linea: "A", estacion: "Plaza Miserere", nombre: "Conexión con Línea A y hall del FFCC Sarmiento"}
+    conexiones:
+      - {equipo: "A2", medio: ascensor, entre: [anden_facultad, vestibulo],
+         texto: "Ascensor N°2: Andén sentido Facultad - Vestíbulo"}
+      - {equipo: "A3", medio: ascensor, entre: [anden_hospitales, vestibulo],
+         texto: "Ascensor N°3: Andén a Hospitales - Hall Boletería"}
+      - {equipo: "A1", medio: ascensor, entre: [vestibulo, salida_pueyrredon_71],
+         texto: "Ascensor N°1: Hall Boletería - Av. Pueyrredón 71"}
+      - {equipo: "S3", medio: salvaescaleras, entre: [vestibulo, comb_sarmiento_a],
+         texto: "Salvaescalera P1: Hall Boletería – Conexión con L/A y Hall FF.CC. Sarmiento"}
+      - {equipo: "P 2", medio: salvaescaleras, entre: [vestibulo, comb_sarmiento_a],
+         texto: "Salvaescalera P2 Tren Sarmiento - Hall Boletería",
+         duda: "'Tren Sarmiento - Hall boletería': ¿es el mismo recorrido que S3 o un tramo distinto?"}
+      - {equipo: "E4", medio: escalera_mecanica, desde: anden_facultad, hasta: entrepiso,
+         texto: "Escalera N°4: Andén sentido a Facultad - Entrepiso"}
+      - {equipo: "E5", medio: escalera_mecanica, desde: anden_facultad, hasta: entrepiso,
+         texto: "Escalera N°5: Andén sentido Facultad - Entrepiso"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: anden_hospitales, hasta: entrepiso,
+         texto: "Escalera N°1: Andén sentido Hospitales - Entrepiso"}
+      - {equipo: "E8", medio: escalera_mecanica, desde: anden_hospitales, hasta: entrepiso,
+         texto: "Escalera N°8: Ascendente andén hospitales a Entrepiso"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: entrepiso, hasta: vestibulo,
+         texto: "Escalera N°2: Entrepiso - Vestíbulo"}
+      - {equipo: "E6", medio: escalera_mecanica, desde: entrepiso, hasta: vestibulo,
+         texto: "Escalera N°6: Entrepiso - Vestíbulo"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: vestibulo, hasta: entrepiso,
+         texto: "Escalera N°3: Hall boletería - entrepiso",
+         duda: "'Hall boletería - entrepiso': asumimos que baja."}
+      - {equipo: "E7", medio: escalera_mecanica, desde: vestibulo, hasta: entrepiso,
+         texto: "Escalera N°7: Descendente de vestíbulo a entrepiso"}
+      - {equipo: "E10", medio: escalera_mecanica, desde: vestibulo, hasta: entrepiso_salida,
+         texto: "Escalera N°10: Vestibulo central a Entrepiso"}
+      - {equipo: "E9", medio: escalera_mecanica, desde: entrepiso_salida, hasta: salida_pueyrredon_mitre,
+         texto: "Escalera N°9: Ascendente entrepiso - Av. Pueyrredón esquina Bmé. Mitre"}
+
+  - nombre: "Venezuela"
+    categoria_oficial: a
+    revisado: false
+    lugares:
+      anden_facultad: {tipo: "anden", sentidos: ["Facultad de Derecho"]}
+      anden_hospitales: {tipo: "anden", sentidos: ["Hospitales"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo"}
+      salida_jujuy_451: {tipo: "calle", direccion: "Av. Jujuy 451"}
+      salida_jujuy_425: {tipo: "calle", direccion: "Av. Jujuy 425"}
+      salida_jujuy_420: {tipo: "calle", direccion: "Av. Jujuy 420"}
+    conexiones:
+      - {equipo: "A2", medio: ascensor, entre: [anden_facultad, vestibulo],
+         texto: "Ascensor N°2: Andén Sentido Facultad - Vestíbulo"}
+      - {equipo: "A3", medio: ascensor, entre: [anden_hospitales, vestibulo],
+         texto: "Ascensor N°3: Andén Sentido Hospitales - Vestíbulo"}
+      - {equipo: "A1", medio: ascensor, entre: [vestibulo, salida_jujuy_451],
+         texto: "Ascensor N°1: Vestíbulo - Av. Jujuy 451"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: anden_facultad, hasta: vestibulo,
+         texto: "Escalera N°3 : Andén - Vestíbulo sentido Facultad de Derecho"}
+      - {equipo: "E4", medio: escalera_mecanica, desde: anden_hospitales, hasta: vestibulo,
+         texto: "Escalera N°4: Andén - Vestíbulo sentido Hospitales"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: vestibulo, hasta: salida_jujuy_425,
+         texto: "Escalera N°1: Vestíbulo - Av. Jujuy 425"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: vestibulo, hasta: salida_jujuy_420,
+         texto: "Escalera N°2: Vestíbulo - Jujuy 420"}
+
+  - nombre: "Humberto 1°"
+    categoria_oficial: a
+    revisado: false
+    lugares:
+      anden_facultad: {tipo: "anden", sentidos: ["Facultad de Derecho"]}
+      anden_hospitales: {tipo: "anden", sentidos: ["Hospitales"]}
+      entrepiso: {tipo: "interior", nombre: "Entrepiso central"}
+      boleteria_lado_e: {tipo: "interior", nombre: "Boletería del lado de la combinación con Línea E"}
+      boleteria_humberto: {tipo: "interior", nombre: "Boletería que da a la calle Humberto 1°"}
+      pasillo_e_virreyes: {tipo: "interior", nombre: "Pasillo a Línea E, sentido Virreyes"}
+      salida_jujuy_1194: {tipo: "calle", direccion: "Av. Jujuy 1194"}
+      salida_jujuy_1148: {tipo: "calle", direccion: "Av. Jujuy 1148"}
+      comb_e_virreyes: {tipo: "combinacion", linea: "E", estacion: "Jujuy", lugar: "anden_virreyes", nombre: "Andén de Jujuy (Línea E), sentido Virreyes"}
+      comb_e_retiro: {tipo: "combinacion", linea: "E", estacion: "Jujuy", nombre: "Pasillo a Jujuy (Línea E), sentido Retiro"}
+    conexiones:
+      - {equipo: "A2", medio: ascensor, entre: [anden_facultad, boleteria_lado_e],
+         texto: "Ascensor N°2: Andén sentido Facultad a Boletería del lado combinación con Línea E"}
+      - {equipo: "A3", medio: ascensor, entre: [anden_hospitales, boleteria_lado_e],
+         texto: "Ascensor N°3: Andén sentido Hospitales a Boletería del lado combinación con Línea E"}
+      - {equipo: "A1", medio: ascensor, entre: [boleteria_lado_e, salida_jujuy_1194],
+         texto: "Ascensor N°1 Boletería del lado combinación con Línea E a Av. Jujuy 1194"}
+      - {equipo: "A4", medio: ascensor, entre: [pasillo_e_virreyes, comb_e_virreyes],
+         texto: "Ascensor N° 4 Combinación con Línea E al andén sentido a Pza. de los Virreyes"}
+      - {equipo: "S2", medio: salvaescaleras, entre: [boleteria_lado_e, pasillo_e_virreyes],
+         texto: "S2: Salvaescalera vestíbulo - pasillo Línea E sentido Virreyes"}
+      - {equipo: "S1", medio: salvaescaleras, entre: [boleteria_lado_e, comb_e_retiro],
+         texto: "S1: Salvaescalera vestíbulo - pasillo Línea E sentido Retiro",
+         duda: "Llega al pasillo; no sabemos si desde ahí se accede al andén de la E sin escalones."}
+      - {equipo: "E1", medio: escalera_mecanica, desde: anden_facultad, hasta: entrepiso,
+         texto: "Escalera N°1: Andén sentido Facultad a entrepiso central"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: anden_hospitales, hasta: entrepiso,
+         texto: "Escalera N°2: Andén sentido Hospitales a entrepiso central"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: entrepiso, hasta: boleteria_lado_e,
+         texto: "Escalera N°3: Entrepiso central a Boletería del lado combinación con Línea E"}
+      - {equipo: "E4", medio: escalera_mecanica, desde: entrepiso, hasta: boleteria_humberto,
+         texto: "Escalera N°4: Entrepiso - Boletería que da a la calle Humberto 1°"}
+      - {equipo: "E5", medio: escalera_mecanica, desde: boleteria_humberto, hasta: salida_jujuy_1148,
+         texto: "Escalera N°5: ascendente a boleteria a Av. Jujuy 1148"}
+
+  - nombre: "Inclán - Mezquita Al Ahmad"
+    nombre_api: "Inclán Mezquita Al Ahmad"
+    categoria_oficial: a
+    revisado: false
+    dudas:
+      - "SEGÚN LOS TEXTOS, los ascensores de andén llegan a la boletería de Inclán y el ascensor a la calle sale de la boletería de Garay: no queda camino solo con ascensores. Probablemente sea un error de los textos o las boleterías estén unidas a nivel. Revisar en el lugar."
+    lugares:
+      anden_facultad: {tipo: "anden", sentidos: ["Facultad de Derecho"]}
+      anden_hospitales: {tipo: "anden", sentidos: ["Hospitales"]}
+      boleteria_inclan: {tipo: "interior", nombre: "Boletería del lado de la calle Inclán"}
+      boleteria_garay: {tipo: "interior", nombre: "Boletería del lado de Av. Garay"}
+      salida_jujuy_1633: {tipo: "calle", direccion: "Av. Jujuy 1633"}
+      salida_jujuy_1691: {tipo: "calle", direccion: "Av. Jujuy 1691"}
+      salida_jujuy_1600: {tipo: "calle", direccion: "Av. Jujuy 1600"}
+    conexiones:
+      - {equipo: "A2", medio: ascensor, entre: [anden_facultad, boleteria_inclan],
+         texto: "Ascensor N°2: Andén sentido Facultad a Boletería calle Inclán"}
+      - {equipo: "A3", medio: ascensor, entre: [anden_hospitales, boleteria_inclan],
+         texto: "Ascensor N°3: Andén sentido Hospitales a Boletería calle Inclán"}
+      - {equipo: "A1", medio: ascensor, entre: [boleteria_garay, salida_jujuy_1633],
+         texto: "Ascensor N°1: Boletería esquina Garay con salida a Av. Jujuy 1633"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: anden_facultad, hasta: boleteria_garay,
+         texto: "Escalera N°1: Andén sentido Facultad a Boletería del lado Av. Garay"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: anden_hospitales, hasta: boleteria_garay,
+         texto: "Escalera N°2: Andén sentido Hospitales a Boletería del lado Av. Garay"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: boleteria_inclan, hasta: salida_jujuy_1691,
+         texto: "Escalera N°3: Boletería del lado calle Inclán a Av. Jujuy 1691"}
+      - {equipo: "E4", medio: escalera_mecanica, desde: boleteria_garay, hasta: salida_jujuy_1600,
+         texto: "Escalera N°4: Ascendende boleteria a Av. Jujuy 1600",
+         duda: "La API no dice de qué boletería sale; por la numeración de la calle asumimos la de Garay."}
+
+  - nombre: "Caseros"
+    categoria_oficial: a
+    revisado: false
+    lugares:
+      anden_facultad: {tipo: "anden", sentidos: ["Facultad de Derecho"]}
+      anden_hospitales: {tipo: "anden", sentidos: ["Hospitales"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo"}
+      salida_jujuy_2179: {tipo: "calle", direccion: "Av. Jujuy 2179"}
+      salida_jujuy_2110: {tipo: "calle", direccion: "Av. Jujuy 2110"}
+      salida_jujuy_2180: {tipo: "calle", direccion: "Av. Jujuy 2180"}
+    conexiones:
+      - {equipo: "A2", medio: ascensor, entre: [anden_facultad, vestibulo],
+         texto: "Ascensor N°1:Andén sentido Facultad - Vestíbulo"}
+      - {equipo: "A3", medio: ascensor, entre: [anden_hospitales, vestibulo],
+         texto: "Ascensor N°2: Andén sentido Hospitales - Vestíbulo"}
+      - {equipo: "A1", medio: ascensor, entre: [vestibulo, salida_jujuy_2179],
+         texto: "Ascensor N°3: Vestíbulo - Av. Jujuy 2179"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: anden_facultad, hasta: vestibulo,
+         texto: "Escalera N°1: Andén sentido Facultad - Vestíbulo"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: anden_hospitales, hasta: vestibulo,
+         texto: "Escalera N°2: Andén sentido Hospitales - Vestíbulo"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: vestibulo, hasta: salida_jujuy_2110,
+         texto: "Escalera N°3: Vestíbulo - Av. Jujuy 2110"}
+      - {equipo: "E4", medio: escalera_mecanica, desde: vestibulo, hasta: salida_jujuy_2180,
+         texto: "Escalera N°4: Vestíbulo - Av. Jujuy 2180"}
+
+  - nombre: "Parque Patricios"
+    categoria_oficial: a
+    revisado: false
+    lugares:
+      anden_facultad: {tipo: "anden", sentidos: ["Facultad de Derecho"]}
+      anden_hospitales: {tipo: "anden", sentidos: ["Hospitales"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo"}
+      salida_monteagudo_28: {tipo: "calle", direccion: "Monteagudo 28 (y Av. Caseros)"}
+      salida_plaza: {tipo: "calle", direccion: "Plaza Parque de los Patricios"}
+    conexiones:
+      - {equipo: "A2", medio: ascensor, entre: [anden_facultad, vestibulo],
+         texto: "Ascensor N°2: Andén sentido Facultad - Vestíbulo"}
+      - {equipo: "A3", medio: ascensor, entre: [anden_hospitales, vestibulo],
+         texto: "Ascensor N°1: Andén sentido Hospitales - Vestíbulo"}
+      - {equipo: "A1", medio: ascensor, entre: [vestibulo, salida_monteagudo_28],
+         texto: "Ascensor N°3: Vestíbulo - Monteagudo 28 (y Av. Caseros)"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: anden_facultad, hasta: vestibulo,
+         texto: "Escalera N°3: Andén - Vestíbulo",
+         duda: "La API dice solo 'Andén'; el andén sale del PDF (N°3 norte, N°4 sur)."}
+      - {equipo: "E4", medio: escalera_mecanica, desde: anden_hospitales, hasta: vestibulo,
+         texto: "Escalera N°4: Andén - Vestíbulo",
+         duda: "Ídem E3."}
+      - {equipo: "E1", medio: escalera_mecanica, desde: vestibulo, hasta: salida_plaza,
+         texto: "Escalera N°1:Vestíbulo - Plaza Parque de los Patricios"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: salida_plaza, hasta: vestibulo,
+         texto: "Escalera N°2: Plaza Parque de los Patricios - vestíbulo"}
+
+  - nombre: "Hospitales"
+    categoria_oficial: a
+    revisado: false
+    dudas:
+      - "Terminal: se modela un solo andén en uso, para llegadas y salidas. Confirmar cuál es y que A3 va a ese andén."
+    lugares:
+      anden: {tipo: "anden", sentidos: ["Facultad de Derecho", "Hospitales"], nombre: "Andén operativo (terminal)"}
+      anden_no_operativo: {tipo: "anden", sentidos: [], nombre: "Andén no operativo"}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo central"}
+      salida_almafuerte_300: {tipo: "calle", direccion: "Av. Almafuerte 300"}
+      salida_almafuerte_los_patos: {tipo: "calle", direccion: "Av. Almafuerte y Los Patos"}
+    conexiones:
+      - {equipo: "A3", medio: ascensor, entre: [anden, vestibulo],
+         texto: "Ascensor N°3: Andén - vestíbulo (Sentido Facultad)"}
+      - {equipo: "A2", medio: ascensor, entre: [anden_no_operativo, vestibulo],
+         texto: "Ascensor N°2: Andén - vestíbulo central",
+         duda: "La API no dice a qué andén va; por el campo 'cabecera' asumimos el no operativo."}
+      - {equipo: "A1", medio: ascensor, entre: [vestibulo, salida_almafuerte_300],
+         texto: "Ascensor N°1: Vestíbulo - Av. Almafuerte 300"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: anden, hasta: vestibulo,
+         texto: "Escalera N°1: Andén - vestíbulo"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: anden_no_operativo, hasta: vestibulo,
+         texto: "Escalera N°2: Andén no operativo - vestíbulo"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: vestibulo, hasta: salida_almafuerte_los_patos,
+         texto: "Escalera N°3: Vestíbulo - Av. Almafuerte y Los Patos"}

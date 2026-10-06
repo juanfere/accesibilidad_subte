@@ -1,0 +1,345 @@
+# Modelo de accesibilidad de la Línea A — BORRADOR A REVISAR
+#
+# Describe, para cada estación, los LUGARES (andenes, vestíbulos, salidas a la
+# calle, puntos de combinación) y las CONEXIONES entre ellos que dependen de un
+# medio de elevación. Se armó a mano leyendo los textos de la API de EMOVA y la
+# tabla de escaleras del pedido de informes (Res. 145/2026). Ver analisis.md.
+#
+# Cómo leerlo:
+#   lugares     tipo anden: "sentidos" = hacia dónde van los trenes que paran ahí
+#               (dos sentidos = andén central o terminal; ninguno = fuera de uso).
+#               "solo: llegada" / "solo: salida" = andén de terminal donde solo
+#               se baja o solo se sube al tren.
+#               tipo combinacion: si tiene "lugar", es ese mismo lugar de la
+#               otra estación (permite llegar a la calle a través de otra línea).
+#   conexiones  "equipo" es el código del medio en la API de EMOVA (campo nombre),
+#               que es lo que permite cruzarlo con el estado en vivo.
+#               "entre": se recorre en cualquier sentido (2 o más paradas).
+#               "desde" -> "hasta": se recorre en un solo sentido.
+#               "texto" es la descripción de EMOVA al momento de armar el mapa.
+#   sin_ubicar  equipos que EMOVA informa pero cuyo recorrido no se conoce.
+#   duda / dudas  lo que no se pudo determinar con las fuentes: REVISAR EN EL LUGAR.
+#   nota        aclaración sobre de dónde salió el dato.
+#   revisado    pasar a true cuando alguien que conoce la estación la validó.
+#
+# No figuran escaleras fijas, rampas ni desniveles: ninguna fuente los informa.
+
+linea: A
+cabeceras: [Plaza de Mayo, San Pedrito]   # las estaciones van en este orden
+estaciones:
+
+  - nombre: "Plaza de Mayo"
+    categoria_oficial: a
+    revisado: false
+    lugares:
+      anden: {tipo: "anden", sentidos: ["San Pedrito", "Plaza de Mayo"], nombre: "Andén central (terminal)"}
+      salida_yrigoyen_299: {tipo: "calle", direccion: "Hipólito Yrigoyen 299"}
+    conexiones:
+      - {equipo: "A1", medio: ascensor, entre: [anden, salida_yrigoyen_299],
+         texto: "Ascensor N°1: Andén central - Hipólito Yrigoyen 299"}
+
+  - nombre: "Perú"
+    categoria_oficial: a
+    revisado: false
+    dudas:
+      - "No hay datos de cómo se va del hall boletería sur al andén."
+    lugares:
+      anden_plaza_de_mayo: {tipo: "anden", sentidos: ["Plaza de Mayo"]}
+      anden_san_pedrito: {tipo: "anden", sentidos: ["San Pedrito"]}
+      hall_sur: {tipo: "interior", nombre: "Hall boletería sur"}
+      salida_mayo_599: {tipo: "calle", direccion: "Av. de Mayo 599 (y Perú)"}
+      salida_mayo_600: {tipo: "calle", direccion: "Av. de Mayo 600 (y Perú)"}
+      salida_mayo_593: {tipo: "calle", direccion: "Av. de Mayo 593"}
+      salida_mayo_556: {tipo: "calle", direccion: "Av. de Mayo 556"}
+    conexiones:
+      - {equipo: "AN", medio: ascensor, entre: [anden_plaza_de_mayo, salida_mayo_599],
+         texto: "Ascensor N°1 (Norte): Andén - Av. de Mayo 599 (y Perú)"}
+      - {equipo: "AS", medio: ascensor, entre: [anden_san_pedrito, salida_mayo_600],
+         texto: "Ascensor N°2 (Sur): Andén - Av. de Mayo 600 (y Perú)"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: anden_plaza_de_mayo, hasta: salida_mayo_593,
+         texto: "Escalera N°1: Andén - Av. de Mayo 593"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: salida_mayo_556, hasta: hall_sur,
+         texto: "Escalera N°2: Av.de Mayo 556 a Hall boletería"}
+
+  - nombre: "Piedras"
+    categoria_oficial: b
+    revisado: false
+    lugares:
+      anden_plaza_de_mayo: {tipo: "anden", sentidos: ["Plaza de Mayo"]}
+      anden_san_pedrito: {tipo: "anden", sentidos: ["San Pedrito"]}
+      salida_mayo_839: {tipo: "calle", direccion: "Av. de Mayo 839"}
+    conexiones:
+      - {equipo: "E2", medio: escalera_mecanica, desde: anden_plaza_de_mayo, hasta: salida_mayo_839,
+         texto: "Escalera N°2: Andén - Av. de Mayo 839"}
+
+  - nombre: "Lima"
+    categoria_oficial: b
+    revisado: false
+    lugares:
+      anden_plaza_de_mayo: {tipo: "anden", sentidos: ["Plaza de Mayo"]}
+      anden_san_pedrito: {tipo: "anden", sentidos: ["San Pedrito"]}
+      salida_mayo_1127: {tipo: "calle", direccion: "Av. de Mayo 1127"}
+    conexiones:
+      - {equipo: "E1", medio: escalera_mecanica, desde: anden_plaza_de_mayo, hasta: salida_mayo_1127,
+         texto: "Escalera N°1: Andén - Av. de Mayo 1127",
+         duda: "La API dice 'Andén'; el pedido de informes dice que sale del hall central de boletería."}
+
+  - nombre: "Sáenz Peña"
+    nombre_api: "Saenz Peña"
+    categoria_oficial: b
+    revisado: false
+    lugares:
+      anden_plaza_de_mayo: {tipo: "anden", sentidos: ["Plaza de Mayo"]}
+      anden_san_pedrito: {tipo: "anden", sentidos: ["San Pedrito"]}
+      salida_mayo_1423: {tipo: "calle", direccion: "Av. de Mayo 1423"}
+      salida_mayo_1470: {tipo: "calle", direccion: "Av. de Mayo 1470"}
+    conexiones:
+      - {equipo: "EN", medio: escalera_mecanica, desde: anden_plaza_de_mayo, hasta: salida_mayo_1423,
+         texto: "Escalera N°1: Andén sentido Plaza de Mayo - Av. de Mayo 1423"}
+      - {equipo: "ES", medio: escalera_mecanica, desde: anden_san_pedrito, hasta: salida_mayo_1470,
+         texto: "Escalera N°2: Andén sentido San Pedrito - Av. de Mayo 1470"}
+
+  - nombre: "Congreso"
+    categoria_oficial: a
+    revisado: false
+    lugares:
+      anden_plaza_de_mayo: {tipo: "anden", sentidos: ["Plaza de Mayo"]}
+      anden_san_pedrito: {tipo: "anden", sentidos: ["San Pedrito"]}
+      salida_rivadavia_1841: {tipo: "calle", direccion: "Av. Rivadavia 1841"}
+      salida_rivadavia_1802: {tipo: "calle", direccion: "Av. Rivadavia 1802 (y Entre Ríos)"}
+      salida_rivadavia_1815: {tipo: "calle", direccion: "Av. Rivadavia 1815"}
+      salida_rivadavia_pozos: {tipo: "calle", direccion: "Av. Rivadavia y Combate de los Pozos"}
+    conexiones:
+      - {equipo: "AN", medio: ascensor, entre: [anden_plaza_de_mayo, salida_rivadavia_1841],
+         texto: "Ascensor N°1 (Norte): Andén - Av. Rivadavia 1841"}
+      - {equipo: "AS", medio: ascensor, entre: [anden_san_pedrito, salida_rivadavia_1802],
+         texto: "Ascensor N°2 (Sur): Andén sentido San Pedrito - Av. Rivadavia 1802 (y Entre Ríos)"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: anden_plaza_de_mayo, hasta: salida_rivadavia_1815,
+         texto: "Escalera N°3: Andén sentido Plaza de Mayo - Av. Rivadavia 1815"}
+      - {equipo: "ES", medio: escalera_mecanica, desde: anden_san_pedrito, hasta: salida_rivadavia_pozos,
+         texto: "Escalera N°4: Andén sentido San Pedrito - Av.Rivadavia y Combate de los Pozos"}
+
+  - nombre: "Pasco"
+    nombre_api: null   # EMOVA no informa ningún equipo en esta estación
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Estación de un solo sentido. CONFIRMAR que el andén en uso es el que va a Plaza de Mayo."
+    lugares:
+      anden_plaza_de_mayo: {tipo: "anden", sentidos: ["Plaza de Mayo"]}
+    conexiones: []
+
+  - nombre: "Alberti"
+    nombre_api: null   # EMOVA no informa ningún equipo en esta estación
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Estación de un solo sentido. CONFIRMAR que el andén en uso es el que va a San Pedrito."
+    lugares:
+      anden_san_pedrito: {tipo: "anden", sentidos: ["San Pedrito"]}
+    conexiones: []
+
+  - nombre: "Plaza Miserere"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Ninguna fuente informa equipos que lleguen a la calle. Estación con andenes laterales y central: revisar qué andén usa cada sentido."
+    lugares:
+      anden_plaza_de_mayo: {tipo: "anden", sentidos: ["Plaza de Mayo"]}
+      anden_san_pedrito: {tipo: "anden", sentidos: ["San Pedrito"]}
+      pasillo_este: {tipo: "interior", nombre: "Pasillo este"}
+      pasillo_oeste: {tipo: "interior", nombre: "Pasillo oeste"}
+      galeria: {tipo: "interior", nombre: "Pasillo y galería comercial"}
+      tunel_oeste: {tipo: "interior", nombre: "Túnel oeste de la galería comercial"}
+      ffcc_sarmiento: {tipo: "combinacion", linea: "FFCC", estacion: "Once (Línea Sarmiento)", nombre: "Estación Once del tren Sarmiento"}
+    conexiones:
+      - {equipo: "E6", medio: escalera_mecanica, desde: anden_san_pedrito, hasta: pasillo_este,
+         texto: "Escalera N°6: Sudeste de andén - pasillo este"}
+      - {equipo: "E7", medio: escalera_mecanica, desde: anden_san_pedrito, hasta: pasillo_oeste,
+         texto: "Escalera N°7: Sudoeste de andén - pasillo este",
+         duda: "La API dice 'pasillo este'; el pedido de informes, 'pasillo oeste'."}
+      - {equipo: "EQE", medio: escalera_mecanica, desde: anden_plaza_de_mayo, hasta: galeria,
+         texto: "Escalera Q.E 10: Andén a Plaza de Mayo – Pasillo y Galería Comercial"}
+      - {equipo: "EQO", medio: escalera_mecanica, desde: anden_san_pedrito, hasta: galeria,
+         texto: "Escalera Q.O 11: Andén a San Pedrito - Pasillo y Galería Comercial",
+         duda: "La API dice andén a San Pedrito; el pedido de informes, andén noroeste (a Plaza de Mayo)."}
+      - {equipo: "E9", medio: escalera_mecanica, desde: tunel_oeste, hasta: ffcc_sarmiento,
+         texto: "Escalera N°9: Túnel oeste de galería Comercial - estación Once Línea Sarmiento"}
+      - {equipo: "E8", medio: escalera_mecanica, desde: ffcc_sarmiento, hasta: tunel_oeste,
+         texto: "Escalera N° 8: Estación Once Línea Sarmiento - túnel oeste de galería comercial"}
+
+  - nombre: "Loria"
+    categoria_oficial: b
+    revisado: false
+    lugares:
+      anden_plaza_de_mayo: {tipo: "anden", sentidos: ["Plaza de Mayo"]}
+      anden_san_pedrito: {tipo: "anden", sentidos: ["San Pedrito"]}
+      salida_rivadavia_3427: {tipo: "calle", direccion: "Av. Rivadavia 3427"}
+      salida_rivadavia_3466: {tipo: "calle", direccion: "Av. Rivadavia 3466"}
+    conexiones:
+      - {equipo: "AN", medio: ascensor, entre: [anden_plaza_de_mayo, salida_rivadavia_3427],
+         texto: "Ascensor N°1 (Norte): Andén sentido Plaza de Mayo - Av. Rivadavia 3427"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: anden_san_pedrito, hasta: salida_rivadavia_3466,
+         texto: "Escalera N°1: Andén sentido San Pedrito - Av. Rivadavia 3466"}
+
+  - nombre: "Castro Barros"
+    categoria_oficial: b
+    revisado: false
+    lugares:
+      anden_plaza_de_mayo: {tipo: "anden", sentidos: ["Plaza de Mayo"]}
+      anden_san_pedrito: {tipo: "anden", sentidos: ["San Pedrito"]}
+      salida_rivadavia_3910: {tipo: "calle", direccion: "Av. Rivadavia 3910"}
+      salida_rivadavia_3924: {tipo: "calle", direccion: "Av. Rivadavia 3924"}
+    conexiones:
+      - {equipo: "AS", medio: ascensor, entre: [anden_san_pedrito, salida_rivadavia_3910],
+         texto: "Ascensor N°1: Andén sentido a San Pedrito a Rivadavia 3910"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: anden_san_pedrito, hasta: salida_rivadavia_3924,
+         texto: "Escalera N°1: Andén sentido a San Pedrito a Av. Rivadavia 3924"}
+
+  - nombre: "Río de Janeiro"
+    nombre_api: null   # EMOVA no informa ningún equipo en esta estación
+    categoria_oficial: b
+    revisado: false
+    lugares:
+      anden_plaza_de_mayo: {tipo: "anden", sentidos: ["Plaza de Mayo"]}
+      anden_san_pedrito: {tipo: "anden", sentidos: ["San Pedrito"]}
+    conexiones: []
+
+  - nombre: "Acoyte"
+    categoria_oficial: a
+    revisado: false
+    lugares:
+      anden_plaza_de_mayo: {tipo: "anden", sentidos: ["Plaza de Mayo"]}
+      anden_san_pedrito: {tipo: "anden", sentidos: ["San Pedrito"]}
+      hall_sur: {tipo: "interior", nombre: "Hall boletería sur"}
+      salida_rivadavia_4963: {tipo: "calle", direccion: "Av. Rivadavia 4963"}
+      salida_rivadavia_4970: {tipo: "calle", direccion: "Av. Rivadavia 4970"}
+      salida_rivadavia_4994: {tipo: "calle", direccion: "Av. Rivadavia 4994"}
+    conexiones:
+      - {equipo: "A1", medio: ascensor, entre: [anden_plaza_de_mayo, salida_rivadavia_4963],
+         texto: "Ascensor N°1(Norte) :Andén sentido Plaza de Mayo - Av.Rivadavia 4963"}
+      - {equipo: "A2", medio: ascensor, entre: [anden_san_pedrito, salida_rivadavia_4970],
+         texto: "Ascensor N°2 (Sur): Andén sentido San Pedrito - Av. Rivadavia 4970"}
+      - {equipo: "E4", medio: escalera_mecanica, desde: salida_rivadavia_4994, hasta: hall_sur,
+         texto: "Escalera N°4: Av. Rivadavia 4994 - Hall boletería Andén sentido San Pedrito"}
+      - {equipo: "E5", medio: escalera_mecanica, desde: anden_san_pedrito, hasta: salida_rivadavia_4994,
+         texto: "Escalera N° 5: Andén sentido San Pedrito - Av. Rivadavia 4994",
+         duda: "La API dice que sale del andén; el pedido de informes, del hall boletería sur."}
+
+  - nombre: "Primera Junta"
+    categoria_oficial: c
+    revisado: false
+    lugares:
+      anden_plaza_de_mayo: {tipo: "anden", sentidos: ["Plaza de Mayo"]}
+      anden_san_pedrito: {tipo: "anden", sentidos: ["San Pedrito"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      salida_plazoleta: {tipo: "calle", direccion: "Plazoleta Primera Junta (Av. Rivadavia 5400)"}
+    conexiones:
+      - {equipo: "A1", medio: ascensor, entre: [vestibulo, salida_plazoleta],
+         texto: "Ascensor N°1 (ext.): Vestíbulo - Plazoleta Primera Junta (Av. Rivadavia 5400)"}
+      - {equipo: "A2", medio: ascensor, entre: [anden_san_pedrito, vestibulo],
+         texto: "Ascensor N°2: Andén sentido a San Pedrito - Hall boletería"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: vestibulo, hasta: salida_plazoleta,
+         texto: "Escalera N°1 (ext.): Vestíbulo - Plazoleta Primera Junta (Av. Rivadavia 5400)"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: vestibulo, hasta: anden_plaza_de_mayo,
+         texto: "Escalera N°3 (norte): Vestíbulos - andén noreste"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: anden_san_pedrito, hasta: vestibulo,
+         texto: "Escalera N°2 (sur) Andén sureste - vestíbulos"}
+
+  - nombre: "Puan"
+    categoria_oficial: a
+    revisado: false
+    lugares:
+      anden_plaza_de_mayo: {tipo: "anden", sentidos: ["Plaza de Mayo"]}
+      anden_san_pedrito: {tipo: "anden", sentidos: ["San Pedrito"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      salida_ascensor: {tipo: "calle", direccion: "Av. Rivadavia 5951"}
+      salida_escalera: {tipo: "calle", direccion: "Av. Rivadavia 5896"}
+    conexiones:
+      - {equipo: "A1", medio: ascensor, entre: [vestibulo, salida_ascensor],
+         texto: "Ascensor N°1: Hall Boletería – Superficie (Av. Rivadavia 5951)"}
+      - {equipo: "A2", medio: ascensor, entre: [anden_san_pedrito, vestibulo],
+         texto: "Ascensor N°2: Andén - vestíbulo",
+         duda: "La API no dice a qué andén va; se dedujo del campo 'cabecera'."}
+      - {equipo: "A3", medio: ascensor, entre: [anden_plaza_de_mayo, vestibulo],
+         texto: "Ascensor N°3: Andén - vestíbulo",
+         duda: "Ídem A2."}
+      - {equipo: "E1", medio: escalera_mecanica, desde: vestibulo, hasta: salida_escalera,
+         texto: "Escalera N°1(ext): Hall Boletería – Superficie (Av. Rivadavia 5896)"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: anden_san_pedrito, hasta: vestibulo,
+         texto: "Escalera N°2: Andén - vestíbulo"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: anden_plaza_de_mayo, hasta: vestibulo,
+         texto: "Escalera N°3: Andén - vestíbulo"}
+
+  - nombre: "Carabobo"
+    categoria_oficial: a
+    revisado: false
+    lugares:
+      anden_plaza_de_mayo: {tipo: "anden", sentidos: ["Plaza de Mayo"]}
+      anden_san_pedrito: {tipo: "anden", sentidos: ["San Pedrito"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      salida_ascensor: {tipo: "calle", direccion: "Av. Rivadavia 6365"}
+      salida_escalera: {tipo: "calle", direccion: "Av. Rivadavia 6332"}
+    conexiones:
+      - {equipo: "A1", medio: ascensor, entre: [vestibulo, salida_ascensor],
+         texto: "Ascensor N°1: Vestíbulo - Av. Rivadavia 6365"}
+      - {equipo: "A2", medio: ascensor, entre: [anden_san_pedrito, vestibulo],
+         texto: "Ascensor N°2: Andén - vestíbulo",
+         duda: "La API no dice a qué andén va; se dedujo del campo 'cabecera'."}
+      - {equipo: "A3", medio: ascensor, entre: [anden_plaza_de_mayo, vestibulo],
+         texto: "Ascensor N°3: Andén - vestíbulo",
+         duda: "Ídem A2."}
+      - {equipo: "E1", medio: escalera_mecanica, desde: vestibulo, hasta: salida_escalera,
+         texto: "Escalera N°1: Vestíbulo - Av. Rivadavia 6332"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: anden_san_pedrito, hasta: vestibulo,
+         texto: "Escalera N°3: Andén - vestíbulo"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: anden_plaza_de_mayo, hasta: vestibulo,
+         texto: "Escalera N°2: Andén - vestíbulo"}
+
+  - nombre: "San José de Flores"
+    categoria_oficial: a
+    revisado: false
+    lugares:
+      anden_plaza_de_mayo: {tipo: "anden", sentidos: ["Plaza de Mayo"]}
+      anden_san_pedrito: {tipo: "anden", sentidos: ["San Pedrito"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      salida_plaza_flores: {tipo: "calle", direccion: "Plaza Flores (Av. Rivadavia 6950)"}
+      salida_plaza_pueyrredon: {tipo: "calle", direccion: "Plaza General Pueyrredón"}
+      salida_rivadavia_6928: {tipo: "calle", direccion: "Av. Rivadavia 6928"}
+    conexiones:
+      - {equipo: "A1", medio: ascensor, entre: [vestibulo, salida_plaza_flores],
+         texto: "Ascensor N°1: Vestíbulo - Plaza Flores (Av. Rivadavia 6950)"}
+      - {equipo: "A2", medio: ascensor, entre: [anden_san_pedrito, vestibulo],
+         texto: "Ascensor N°2: Andén - Vestíbulo",
+         duda: "La API no dice a qué andén va; se dedujo del campo 'cabecera'."}
+      - {equipo: "A3", medio: ascensor, entre: [anden_plaza_de_mayo, vestibulo],
+         texto: "Ascensor N°3: Andén - Vestíbulo",
+         duda: "Ídem A2."}
+      - {equipo: "E1", medio: escalera_mecanica, desde: vestibulo, hasta: salida_plaza_pueyrredon,
+         texto: "Escalera N°1: Vestíbulo - Plaza General Pueyrredón"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: vestibulo, hasta: salida_rivadavia_6928,
+         texto: "Escalera N°2: Vestíbulo - Av. Rivadavia 6928"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: anden_plaza_de_mayo, hasta: vestibulo,
+         texto: "Escalera N°3: Andén norte (Sentido a Plaza de Mayo) - vestíbulo"}
+      - {equipo: "E4", medio: escalera_mecanica, desde: anden_san_pedrito, hasta: vestibulo,
+         texto: "Escalera N°4: Andén sur (Sentido a San Pedrito) - vestíbulo"}
+
+  - nombre: "San Pedrito"
+    categoria_oficial: a
+    revisado: false
+    lugares:
+      anden: {tipo: "anden", sentidos: ["Plaza de Mayo", "San Pedrito"], nombre: "Andén central (terminal)"}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      salida_rivadavia_7445: {tipo: "calle", direccion: "Av. Rivadavia 7445"}
+      salida_rivadavia_7425: {tipo: "calle", direccion: "Av. Rivadavia 7425"}
+    conexiones:
+      - {equipo: "A1", medio: ascensor, entre: [vestibulo, salida_rivadavia_7445],
+         texto: "Ascensor N°1: Vestíbulo - Av. Rivadavia 7445"}
+      - {equipo: "A2", medio: ascensor, entre: [anden, vestibulo],
+         texto: "Ascensor N°2: Andén central - Vestíbulo"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: vestibulo, hasta: salida_rivadavia_7425,
+         texto: "Escalera N°1: Vestíbulo - Av. Rivadavia 7425"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: anden, hasta: vestibulo,
+         texto: "Escalera N°3: Andén central lado oeste - vestíbulo"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: anden, hasta: vestibulo,
+         texto: "Escalera N°2: Andén central lado este - vestíbulo"}

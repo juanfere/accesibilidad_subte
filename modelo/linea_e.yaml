@@ -1,0 +1,383 @@
+# Modelo de accesibilidad de la Línea E — BORRADOR A REVISAR
+#
+# Describe, para cada estación, los LUGARES (andenes, vestíbulos, salidas a la
+# calle, puntos de combinación) y las CONEXIONES entre ellos que dependen de un
+# medio de elevación. Se armó a mano leyendo los textos de la API de EMOVA y la
+# tabla de escaleras del pedido de informes (Res. 145/2026). Ver analisis.md.
+#
+# Cómo leerlo:
+#   lugares     tipo anden: "sentidos" = hacia dónde van los trenes que paran ahí
+#               (dos sentidos = andén central o terminal; ninguno = fuera de uso).
+#               "solo: llegada" / "solo: salida" = andén de terminal donde solo
+#               se baja o solo se sube al tren.
+#               tipo combinacion: si tiene "lugar", es ese mismo lugar de la
+#               otra estación (permite llegar a la calle a través de otra línea).
+#   conexiones  "equipo" es el código del medio en la API de EMOVA (campo nombre),
+#               que es lo que permite cruzarlo con el estado en vivo.
+#               "entre": se recorre en cualquier sentido (2 o más paradas).
+#               "desde" -> "hasta": se recorre en un solo sentido.
+#               "texto" es la descripción de EMOVA al momento de armar el mapa.
+#   sin_ubicar  equipos que EMOVA informa pero cuyo recorrido no se conoce.
+#   duda / dudas  lo que no se pudo determinar con las fuentes: REVISAR EN EL LUGAR.
+#   nota        aclaración sobre de dónde salió el dato.
+#   revisado    pasar a true cuando alguien que conoce la estación la validó.
+#
+# No figuran escaleras fijas, rampas ni desniveles: ninguna fuente los informa.
+
+linea: E
+cabeceras: [Retiro, Plaza de los Virreyes]   # las estaciones van en este orden
+estaciones:
+
+  - nombre: "Retiro"
+    categoria_oficial: a
+    revisado: false
+    dudas:
+      - "Estación grande con muchos niveles. NO SABEMOS si el vestíbulo, la boletería y los pasillos están unidos a nivel: con los textos, los ascensores no forman un camino completo del andén a la calle."
+      - "Según el pedido de informes, el ascensor N°2 está fuera de servicio desde 2023 por vandalismo."
+    lugares:
+      anden: {tipo: "anden", sentidos: ["Plaza de los Virreyes", "Retiro"], nombre: "Andén central (terminal)"}
+      vestibulo_c: {tipo: "interior", nombre: "Vestíbulo del lado de la combinación con Línea C"}
+      vestibulo_ffcc: {tipo: "interior", nombre: "Vestíbulo del lado de la conexión con el tren"}
+      boleteria: {tipo: "interior", nombre: "Boletería"}
+      hall_salidas_123: {tipo: "interior", nombre: "Hall de las salidas 1, 2 y 3"}
+      hall_salidas_47: {tipo: "interior", nombre: "Hall de las salidas 4 y 7"}
+      pasillo: {tipo: "interior", nombre: "Pasillo de salidas"}
+      pasillo_comb_c: {tipo: "interior", nombre: "Pasillo de combinación con Línea C"}
+      comb_c: {tipo: "combinacion", linea: "C", estacion: "Retiro", lugar: "anden", nombre: "Andén central de Retiro (Línea C)"}
+      salida_libertador_100_s5: {tipo: "calle", direccion: "Av. del Libertador 100 (salida 5)"}
+      salida_libertador_100_s3: {tipo: "calle", direccion: "Av. del Libertador 100 (salida 3)"}
+      salida_juncal_601: {tipo: "calle", direccion: "Juncal 601"}
+    conexiones:
+      - {equipo: "A1", medio: ascensor, entre: [anden, vestibulo_c],
+         texto: "Ascensor N°1: Andén Central - Vestíbulo - combinación con Línea C"}
+      - {equipo: "A2", medio: ascensor, entre: [boleteria, salida_libertador_100_s5],
+         texto: "Ascensor N°2: Boletería - Av Libertador 100 - Salida 5"}
+      - {equipo: "A3", medio: ascensor, entre: [pasillo_comb_c, comb_c],
+         texto: "Ascensor N°3: Pasillo de combinación con Línea C - Andén Central Línea C"}
+      - {equipo: "E9", medio: escalera_mecanica, desde: anden, hasta: vestibulo_c,
+         texto: "Escalera N°10: Andén - Vestíbulo (Lado Combinación con Línea C)"}
+      - {equipo: "E7", medio: escalera_mecanica, desde: vestibulo_c, hasta: anden,
+         texto: "Escalera N°9: Vestíbulo (Lado combinación con Línea C) - Andén Central"}
+      - {equipo: "E8", medio: escalera_mecanica, desde: anden, hasta: vestibulo_ffcc,
+         texto: "Escalera N°7: Andén Central - Vestíbulo (Lado conexión con FFCC)"}
+      - {equipo: "E4", medio: escalera_mecanica, desde: vestibulo_ffcc, hasta: anden,
+         texto: "Escalera N°8: Vestíbulo (Lado conexión con FFCC) - Andén Central"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: boleteria, hasta: hall_salidas_123,
+         texto: "Escalera N°3: Boletería - Hall (Salidas 1, 2 y 3)"}
+      - {equipo: "E5", medio: escalera_mecanica, desde: hall_salidas_123, hasta: boleteria,
+         texto: "Escalera N°4: Hall Salidas 1, 2 y 3 - Boletería"}
+      - {equipo: "E10", medio: escalera_mecanica, desde: boleteria, hasta: hall_salidas_47,
+         texto: "Escalera N°6: Frente de boletería - hall Salidas 4 y 7"}
+      - {equipo: "E6", medio: escalera_mecanica, desde: hall_salidas_47, hasta: boleteria,
+         texto: "Escalera N°5: Hall Salidas 4 y 7 - Boletería"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: pasillo, hasta: salida_juncal_601,
+         texto: "Escalera N°1: Pasillo - Juncal 601"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: pasillo, hasta: salida_libertador_100_s3,
+         texto: "Escalera N°2: Pasillo - Av. Libertador 100 (Salida 3)"}
+
+  - nombre: "Catalinas"
+    categoria_oficial: a
+    revisado: false
+    dudas:
+      - "Tiene vestíbulo norte y sur; la API no dice a cuál llega cada ascensor."
+    lugares:
+      anden: {tipo: "anden", sentidos: ["Retiro", "Plaza de los Virreyes"], nombre: "Andén central"}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo (norte y sur, sin distinguir)"}
+      entrepiso_salida_1: {tipo: "interior", nombre: "Entrepiso de la salida 1"}
+      salida_alem_900_s1: {tipo: "calle", direccion: "Av. Leandro N. Alem 900, plazoleta (salida 1)"}
+      salida_alem_900_s4: {tipo: "calle", direccion: "Av. Leandro N. Alem 900 (salida 4)"}
+    conexiones:
+      - {equipo: "A1", medio: ascensor, entre: [anden, vestibulo],
+         texto: "Ascensor N°1: Andén Central - Vestíbulo"}
+      - {equipo: "A2", medio: ascensor, entre: [vestibulo, salida_alem_900_s1],
+         texto: "Ascensor N°2: Vestíbulo - Salida 1 (Este) - Alem 900 (Plazoleta)"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: anden, hasta: vestibulo,
+         texto: "Escalera N°3: Ascendente de andén central a vestíbulo norte"}
+      - {equipo: "E5", medio: escalera_mecanica, desde: anden, hasta: vestibulo,
+         texto: "Escalera N°5 : Ascendente de andén central a vestíbulo sur"}
+      - {equipo: "E6", medio: escalera_mecanica, desde: vestibulo, hasta: anden,
+         texto: "Escalera N°6: Vestíbulo - Andén Central"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: vestibulo, hasta: salida_alem_900_s4,
+         texto: "Escalera N°1: Vestíbulo - Salida 4 (Av. Leandro N. Alem 900)"}
+      - {equipo: "E4", medio: escalera_mecanica, desde: vestibulo, hasta: entrepiso_salida_1,
+         texto: "Escalera N°2: Vestíbulo - Entrepiso Salida 1"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: entrepiso_salida_1, hasta: salida_alem_900_s1,
+         texto: "Escalera N°4: Entrepiso - Salida 1 (Av. Leandro N. Alem 900)"}
+
+  - nombre: "Correo Central"
+    categoria_oficial: a
+    revisado: false
+    dudas:
+      - "La API no distingue vestíbulo norte y sur; se ubicaron con el pedido de informes. La API y el pedido de informes no coinciden en el sentido de las escaleras 4 y 5."
+    lugares:
+      anden: {tipo: "anden", sentidos: ["Retiro", "Plaza de los Virreyes"], nombre: "Andén central"}
+      vestibulo_sur: {tipo: "interior", nombre: "Vestíbulo sur"}
+      vestibulo_norte: {tipo: "interior", nombre: "Vestíbulo norte"}
+      hall_norte: {tipo: "interior", nombre: "Hall boletería norte"}
+      entrepiso_salida_6: {tipo: "interior", nombre: "Entrepiso / pasillo de la salida 6"}
+      comb_b: {tipo: "combinacion", linea: "B", estacion: "Leandro N. Alem", lugar: "anden", nombre: "Andén central de Leandro N. Alem (Línea B)"}
+      salida_alem_339: {tipo: "calle", direccion: "Av. Leandro N. Alem 339 (frente al Palacio Libertad)"}
+      salida_alem_316: {tipo: "calle", direccion: "Av. Leandro N. Alem 316"}
+      salida_salida_11: {tipo: "calle", direccion: "Salida 11 (frente al Palacio Libertad)"}
+    conexiones:
+      - {equipo: "A1", medio: ascensor, entre: [anden, comb_b],
+         texto: "Ascensor N°4: Andén Central/ Andén Central Línea B"}
+      - {equipo: "A4", medio: ascensor, entre: [anden, vestibulo_sur],
+         texto: "Ascensor N°1: Andén - vestíbulo sur"}
+      - {equipo: "A2", medio: ascensor, entre: [vestibulo_norte, hall_norte],
+         texto: "Ascensor N°2: Vestíbulo norte - hall boletería norte"}
+      - {equipo: "A3", medio: ascensor, entre: [vestibulo_sur, salida_alem_339],
+         texto: "Ascensor N°3: Pasillo - Alem 339 (Frente al Palacio Libertad)",
+         duda: "La API dice que sale de un 'pasillo'; asumimos que es el nivel del vestíbulo sur."}
+      - {equipo: "E5", medio: escalera_mecanica, desde: anden, hasta: vestibulo_sur,
+         texto: "Escalera N°5: Andén - Vestíbulo"}
+      - {equipo: "E4", medio: escalera_mecanica, desde: vestibulo_sur, hasta: anden,
+         texto: "Escalera N°4: Vestíbulo - Andén"}
+      - {equipo: "E6", medio: escalera_mecanica, desde: anden, hasta: vestibulo_norte,
+         texto: "Escalera N°6: Andén - Vestíbulo"}
+      - {equipo: "E7", medio: escalera_mecanica, desde: vestibulo_norte, hasta: anden,
+         texto: "Escalera N°7: Vestíbulo - Andén"}
+      - {equipo: "E8", medio: escalera_mecanica, desde: vestibulo_norte, hasta: hall_norte,
+         texto: "Escalera N°8: Hall boletería (salida 7 y 9) - Vestíbulo",
+         duda: "La API escribe 'Hall boletería - Vestíbulo'; el pedido de informes dice que sube del vestíbulo al hall."}
+      - {equipo: "E9", medio: escalera_mecanica, desde: vestibulo_norte, hasta: hall_norte,
+         texto: "Escalera N°9: Vestíbulo - Hall boletería (salida 2)"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: vestibulo_sur, hasta: entrepiso_salida_6,
+         texto: "Escalera N°3: Vestibulo - Entrepiso salida 6"}
+      - {equipo: "E1", medio: escalera_mecanica, desde: entrepiso_salida_6, hasta: salida_alem_316,
+         texto: "Escalera N°1: Salida 6 (Entrepiso) - Av. L. N. Alem 316"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: vestibulo_sur, hasta: salida_salida_11,
+         texto: "Escalera 2: Vestíbulo a salida 11 - Frente al Palacio Libertad"}
+
+  - nombre: "Bolívar"
+    categoria_oficial: b
+    revisado: false
+    lugares:
+      anden: {tipo: "anden", sentidos: ["Retiro", "Plaza de los Virreyes"], nombre: "Andén central"}
+      vestibulo_este: {tipo: "interior", nombre: "Vestíbulo este"}
+      vestibulo_oeste: {tipo: "interior", nombre: "Vestíbulo oeste"}
+      salida_roca_508: {tipo: "calle", direccion: "Av. Julio A. Roca 508 (y Bolívar)"}
+    conexiones:
+      - {equipo: "E1", medio: escalera_mecanica, desde: anden, hasta: vestibulo_este,
+         texto: "Escalera N°1: Andén Central - Vestíbulo este"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: vestibulo_este, hasta: anden,
+         texto: "Escalera N°2: Vestíbulo este - Andén Central"}
+      - {equipo: "E3", medio: escalera_mecanica, desde: anden, hasta: vestibulo_oeste,
+         texto: "Escalera N°3: Andén Central - Vestíbulo oeste"}
+      - {equipo: "E4", medio: escalera_mecanica, desde: vestibulo_oeste, hasta: anden,
+         texto: "Escalera N°4: Vestíbulo oeste - andén central"}
+      - {equipo: "EExt", medio: escalera_mecanica, desde: vestibulo_este, hasta: salida_roca_508,
+         texto: "Escalera Ext: Vestíbulo este - Julio A. Roca 508 (y Bolívar)"}
+
+  - nombre: "Belgrano"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Ninguna fuente informa equipos que lleguen a la calle."
+    lugares:
+      anden_retiro: {tipo: "anden", sentidos: ["Retiro"]}
+      anden_virreyes: {tipo: "anden", sentidos: ["Plaza de los Virreyes"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+    conexiones:
+      - {equipo: "E5", medio: escalera_mecanica, desde: anden_retiro, hasta: vestibulo,
+         texto: "Escalera N°5: Andén sentido Retiro - Boletería"}
+      - {equipo: "E6", medio: escalera_mecanica, desde: anden_virreyes, hasta: vestibulo,
+         texto: "Escalera N°6: Andén sentido Virreyes - Boletería"}
+      - {equipo: "E8", medio: escalera_mecanica, desde: vestibulo, hasta: anden_virreyes,
+         texto: "Escalera N°8: Andén sentido Virreyes - Boletería",
+         duda: "La API escribe 'Andén - Boletería'; el pedido de informes dice que baja de la boletería al andén."}
+
+  - nombre: "Independencia"
+    categoria_oficial: b
+    revisado: false
+    lugares:
+      anden: {tipo: "anden", sentidos: ["Retiro", "Plaza de los Virreyes"], nombre: "Andén central"}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+      pasillo_sur: {tipo: "interior", nombre: "Pasillo sur"}
+      salida_lima_899: {tipo: "calle", direccion: "Lima 899"}
+    conexiones:
+      - {equipo: "E10", medio: escalera_mecanica, desde: anden, hasta: vestibulo,
+         texto: "Escalera N°10: Andén Central - Vestíbulo",
+         duda: "La API y el pedido de informes no coinciden en cuál de las dos (9 y 10) sube y cuál baja."}
+      - {equipo: "E9", medio: escalera_mecanica, desde: vestibulo, hasta: anden,
+         texto: "Escalera N°9: Vestíbulo - Andén Central",
+         duda: "Ídem E10."}
+      - {equipo: "EExt", medio: escalera_mecanica, desde: pasillo_sur, hasta: salida_lima_899,
+         texto: "Escalera Ext: Pasillo sur - Lima 899"}
+
+  - nombre: "San José"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Ninguna fuente informa equipos que lleguen a la calle."
+    lugares:
+      anden_retiro: {tipo: "anden", sentidos: ["Retiro"]}
+      anden_virreyes: {tipo: "anden", sentidos: ["Plaza de los Virreyes"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+    conexiones:
+      - {equipo: "E11", medio: escalera_mecanica, desde: anden_retiro, hasta: vestibulo,
+         texto: "Escalera N°11: Andén sentido Retiro - Boletería"}
+      - {equipo: "E12", medio: escalera_mecanica, desde: anden_virreyes, hasta: vestibulo,
+         texto: "Escalera N°12: Andén sentido Virreyes - Boletería"}
+
+  - nombre: "Entre Ríos - Rodolfo Walsh"
+    nombre_api: "Entre Ríos"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Ninguna fuente informa equipos que lleguen a la calle."
+    lugares:
+      anden_retiro: {tipo: "anden", sentidos: ["Retiro"]}
+      anden_virreyes: {tipo: "anden", sentidos: ["Plaza de los Virreyes"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+    conexiones:
+      - {equipo: "E13", medio: escalera_mecanica, desde: anden_retiro, hasta: vestibulo,
+         texto: "Escalera N°13: Cerrada por obras en la estación",
+         nota: "EMOVA reemplazó el texto por el aviso de cierre; el tramo sale de la tabla del pedido de informes."}
+      - {equipo: "E14", medio: escalera_mecanica, desde: anden_virreyes, hasta: vestibulo,
+         texto: "Escalera N°14: Cerrada por obras en la estación",
+         nota: "EMOVA reemplazó el texto por el aviso de cierre; el tramo sale de la tabla del pedido de informes."}
+
+  - nombre: "Pichincha"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Ninguna fuente informa equipos que lleguen a la calle."
+    lugares:
+      anden_retiro: {tipo: "anden", sentidos: ["Retiro"]}
+      anden_virreyes: {tipo: "anden", sentidos: ["Plaza de los Virreyes"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+    conexiones:
+      - {equipo: "E15", medio: escalera_mecanica, desde: anden_retiro, hasta: vestibulo,
+         texto: "Escalera N°15: Andén sentido Retiro - Boletería"}
+      - {equipo: "E16", medio: escalera_mecanica, desde: anden_virreyes, hasta: vestibulo,
+         texto: "Escalera N°16: Andén sentido Virreyes - Boletería"}
+
+  - nombre: "Jujuy"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Ninguna fuente informa equipos que lleguen a la calle."
+      - "Combina con Humberto 1° (Línea H); el ascensor de esa combinación figura en el mapa de la H."
+    lugares:
+      anden_retiro: {tipo: "anden", sentidos: ["Retiro"]}
+      anden_virreyes: {tipo: "anden", sentidos: ["Plaza de los Virreyes"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+    conexiones:
+      - {equipo: "E17", medio: escalera_mecanica, desde: anden_retiro, hasta: vestibulo,
+         texto: "Escalera N°17: Andén sentido Retiro - Boletería"}
+      - {equipo: "E18", medio: escalera_mecanica, desde: anden_virreyes, hasta: vestibulo,
+         texto: "Escalera N°18: Andén sentido Virreyes - Boletería"}
+
+  - nombre: "General Urquiza"
+    nombre_api: "Gral. Urquiza"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Ninguna fuente informa equipos que lleguen a la calle."
+    lugares:
+      anden_retiro: {tipo: "anden", sentidos: ["Retiro"]}
+      anden_virreyes: {tipo: "anden", sentidos: ["Plaza de los Virreyes"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+    conexiones:
+      - {equipo: "E19", medio: escalera_mecanica, desde: anden_retiro, hasta: vestibulo,
+         texto: "Escalera N°19: Cerrada por obras en la estación",
+         nota: "EMOVA reemplazó el texto por el aviso de cierre; el tramo sale de la tabla del pedido de informes."}
+      - {equipo: "E20", medio: escalera_mecanica, desde: anden_virreyes, hasta: vestibulo,
+         texto: "Escalera N°20: Cerrada por obras en la estación",
+         nota: "EMOVA reemplazó el texto por el aviso de cierre; el tramo sale de la tabla del pedido de informes."}
+
+  - nombre: "Boedo"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Ninguna fuente informa equipos que lleguen a la calle."
+    lugares:
+      anden: {tipo: "anden", sentidos: ["Retiro", "Plaza de los Virreyes"], nombre: "Andén central"}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+    conexiones:
+      - {equipo: "E21", medio: escalera_mecanica, desde: anden, hasta: vestibulo,
+         texto: "Escalera N°21: Andén Central - Boletería"}
+
+  - nombre: "Avenida La Plata"
+    nombre_api: "Av. La Plata"
+    categoria_oficial: e
+    revisado: false
+    dudas:
+      - "Ninguna fuente informa equipos que lleguen a la calle."
+    lugares:
+      anden: {tipo: "anden", sentidos: ["Retiro", "Plaza de los Virreyes"], nombre: "Andén central"}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+    conexiones:
+      - {equipo: "E22", medio: escalera_mecanica, desde: anden, hasta: vestibulo,
+         texto: "Escalera N°22: Andén Central - Boletería"}
+      - {equipo: "E23", medio: escalera_mecanica, desde: vestibulo, hasta: anden,
+         texto: "Escalera N°23: Andén Central - Boletería",
+         duda: "La API escribe 'Andén - Boletería'; el pedido de informes dice que baja."}
+
+  - nombre: "José María Moreno"
+    nombre_api: "Moreno"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Ninguna fuente informa equipos que lleguen a la calle."
+    lugares:
+      anden_retiro: {tipo: "anden", sentidos: ["Retiro"]}
+      anden_virreyes: {tipo: "anden", sentidos: ["Plaza de los Virreyes"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+    conexiones:
+      - {equipo: "E25", medio: escalera_mecanica, desde: anden_retiro, hasta: vestibulo,
+         texto: "Escalera N°25: Andén sentido Retiro - Boletería"}
+      - {equipo: "E24", medio: escalera_mecanica, desde: anden_virreyes, hasta: vestibulo,
+         texto: "Escalera N°24: Andén sentido Virreyes - Boletería"}
+
+  - nombre: "Emilio Mitre"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Ninguna fuente informa equipos que lleguen a la calle."
+    lugares:
+      anden_retiro: {tipo: "anden", sentidos: ["Retiro"]}
+      anden_virreyes: {tipo: "anden", sentidos: ["Plaza de los Virreyes"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+    conexiones:
+      - {equipo: "E7", medio: escalera_mecanica, desde: anden_virreyes, hasta: vestibulo,
+         texto: "Escalera N°7: Andén sentido Virreyes - Hall Boletería"}
+
+  - nombre: "Medalla Milagrosa"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Ninguna fuente informa equipos que lleguen a la calle."
+    lugares:
+      anden_retiro: {tipo: "anden", sentidos: ["Retiro"]}
+      anden_virreyes: {tipo: "anden", sentidos: ["Plaza de los Virreyes"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+    conexiones:
+      - {equipo: "E1", medio: escalera_mecanica, desde: vestibulo, hasta: anden_retiro,
+         texto: "Escalera N°1: Descendente de hall boletería a andén norte (Sentido a Retiro)"}
+      - {equipo: "E2", medio: escalera_mecanica, desde: anden_virreyes, hasta: vestibulo,
+         texto: "Escalera N°2: Ascendente de andén sur (Sentido a Virreyes) a hall boletería"}
+
+  - nombre: "Varela"
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Ninguna fuente informa equipos que lleguen a la calle."
+    lugares:
+      anden_retiro: {tipo: "anden", sentidos: ["Retiro"]}
+      anden_virreyes: {tipo: "anden", sentidos: ["Plaza de los Virreyes"]}
+      vestibulo: {tipo: "interior", nombre: "Vestíbulo / hall boletería"}
+    conexiones:
+      - {equipo: "E26", medio: escalera_mecanica, desde: anden_virreyes, hasta: vestibulo,
+         texto: "Escalera N°26: Andén sentido Virreyes - Boletería."}
+
+  - nombre: "Plaza de los Virreyes"
+    nombre_api: null   # EMOVA no informa ningún equipo en esta estación
+    categoria_oficial: b
+    revisado: false
+    dudas:
+      - "Terminal sin equipos informados. No sabemos cómo son sus andenes. Hay una obra en curso para instalar ascensores (Licitación 248/25)."
+    lugares:
+      anden: {tipo: "anden", sentidos: ["Retiro", "Plaza de los Virreyes"], nombre: "Andén (terminal)"}
+    conexiones: []
