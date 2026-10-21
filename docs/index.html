@@ -245,11 +245,16 @@
 
   /* ---------- historico ---------- */
   .interval-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
-  .interval-btn {
+  .interval-btn, .tipo-btn {
     appearance: none; cursor: pointer; font-family: inherit; font-size: 0.8rem; font-weight: 600;
     padding: 7px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); color: var(--ink-secondary);
   }
-  .interval-btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .interval-btn[aria-pressed="true"], .tipo-btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .interval-btn:focus-visible, .tipo-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .filtro-tipo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0 0 12px; }
+  .filtro-tipo-label { font-size: 0.85rem; color: var(--ink-secondary); }
+  .filtro-tipo .interval-row { margin: 0; }
 
   .chart-wrap { margin-bottom: 16px; }
   .chart-wrap svg { width: 100%; height: auto; display: block; overflow: visible; }
@@ -334,6 +339,15 @@
     <button class="tab" data-tab="mapa" role="tab" aria-selected="false">Mapa</button>
   </nav>
 
+  <div class="filtro-tipo" role="group" aria-label="Tipo de equipo">
+    <span class="filtro-tipo-label">Mostrar:</span>
+    <div class="interval-row" id="tipo-row">
+      <button class="tipo-btn" data-tipo="todos" aria-pressed="true" title="Todos los equipos">Todos <span class="mono" data-n="todos"></span></button>
+      <button class="tipo-btn" data-tipo="elevadores" aria-pressed="false" title="Ascensores y salvaescaleras, en conjunto">Ascensores y salvaescaleras <span class="mono" data-n="elevadores"></span></button>
+      <button class="tipo-btn" data-tipo="escaleras" aria-pressed="false" title="Solo escaleras mecánicas">Escaleras mecánicas <span class="mono" data-n="escaleras"></span></button>
+    </div>
+  </div>
+
   <label class="filtro-global" title="Saca de todas las vistas (resumen, listas, gráfico y mapa) los accesos fuera de servicio en todas las lecturas de los últimos 7 días.">
     <input type="checkbox" id="ocultar-cronicos">
     <span>Ocultar los accesos que no anduvieron en los últimos 7 días<span class="mono" id="ocultar-cronicos-n"></span></span>
@@ -359,6 +373,7 @@
         <h2>Cambios de estado</h2>
         <p class="hint">Elegí un rango para ver el % de accesos funcionando en cada lectura y qué accesos cambiaron de estado en ese período.</p>
         <div class="interval-row" id="interval-row"></div>
+        <p class="hint" id="chart-tipo-nota" hidden>El gráfico de % por lectura siempre muestra la red completa: la base solo guarda el total de cada lectura, no el desglose por tipo de equipo. La lista de cambios de abajo sí respeta el filtro.</p>
         <div class="chart-wrap" id="chart-container"></div>
         <div id="eventos-container"><div class="loading">Elegí un rango para empezar…</div></div>
       </div>
@@ -574,6 +589,56 @@
 
   var ocultarCronicos = false;
 
+  /* Filtro por tipo de equipo: "todos", "elevadores" (ascensores y
+     salvaescaleras, en conjunto) o "escaleras" (escaleras mecánicas). */
+  var tipoFiltro = "todos";
+
+  /* Clasifica un acceso. Usa `tipo` de la tabla accesos (0 = ascensor,
+     1 = escalera mecánica) y, para lo que no se puede resolver por ahí
+     (p. ej. salvaescaleras, que no tiene un código propio conocido, o
+     descripciones reemplazadas por "Cerrada por obras"), el texto. Los
+     caminos rodantes y lo no reconocible quedan como "otro": solo se ven
+     con "Todos". */
+  function categoriaEquipo(r) {
+    var texto = (r.descripcion || "").toLowerCase();
+    if (texto.indexOf("salvaescalera") !== -1) return "elevadores";
+    if (texto.indexOf("camino rodante") !== -1) return "otro";
+    if (r.tipo === 0) return "elevadores";
+    if (r.tipo === 1) return "escaleras";
+    if (texto.indexOf("ascensor") !== -1) return "elevadores";
+    if (texto.indexOf("escalera") !== -1) return "escaleras";
+    return "otro";
+  }
+
+  function pasaTipo(r) {
+    return tipoFiltro === "todos" || categoriaEquipo(r) === tipoFiltro;
+  }
+
+  /* Claves de los accesos que el filtro de tipo deja afuera (para sacar
+     sus eventos del histórico). */
+  function clavesFueraDeTipo() {
+    var claves = {};
+    (window.__estadoRows || []).forEach(function (r) {
+      if (!pasaTipo(r)) claves[accesoKey(r)] = true;
+    });
+    return claves;
+  }
+
+  /* Cantidades en los botones de tipo y en el checkbox de crónicos. */
+  function actualizarContadores() {
+    var rows = window.__estadoRows || [];
+    var n = { todos: rows.length, elevadores: 0, escaleras: 0 };
+    rows.forEach(function (r) {
+      var c = categoriaEquipo(r);
+      if (n[c] !== undefined) n[c]++;
+    });
+    document.querySelectorAll("#tipo-row [data-n]").forEach(function (el) {
+      el.textContent = n[el.dataset.n];
+    });
+    document.getElementById("ocultar-cronicos-n").textContent =
+      " (" + rows.filter(function (r) { return pasaTipo(r) && noAnduvoEn7Dias(r); }).length + ")";
+  }
+
   function accesoKey(r) { return r.linea + "|" + r.estacion + "|" + r.nombre; }
 
   /* Accesos que el checkbox "ocultar" saca de todas las vistas. */
@@ -582,7 +647,7 @@
   }
 
   function filasVisibles() {
-    var rows = window.__estadoRows || [];
+    var rows = (window.__estadoRows || []).filter(pasaTipo);
     return ocultarCronicos ? rows.filter(function (r) { return !noAnduvoEn7Dias(r); }) : rows;
   }
 
@@ -603,6 +668,20 @@
     if (!window.__estadoRows) return;
     renderEstado();
     if (window.__historicoLoaded) setInterval_(currentIntervalKey);
+  });
+
+  document.querySelectorAll("#tipo-row .tipo-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      tipoFiltro = btn.dataset.tipo;
+      document.querySelectorAll("#tipo-row .tipo-btn").forEach(function (b) {
+        b.setAttribute("aria-pressed", String(b === btn));
+      });
+      document.getElementById("chart-tipo-nota").hidden = tipoFiltro === "todos";
+      if (!window.__estadoRows) return;
+      actualizarContadores();
+      renderEstado();
+      if (window.__historicoLoaded) setInterval_(currentIntervalKey);
+    });
   });
 
   /* Cuánto lleva en el estado actual y cuántas lecturas lo confirman.
@@ -785,7 +864,8 @@
       var eventos = await supaGet(query);
       var ocultas = {};
       filasOcultas().forEach(function (r) { ocultas[accesoKey(r)] = true; });
-      renderEventos(eventos.filter(function (e) { return !ocultas[accesoKey(e)]; }), iv);
+      var fueraDeTipo = clavesFueraDeTipo();
+      renderEventos(eventos.filter(function (e) { return !ocultas[accesoKey(e)] && !fueraDeTipo[accesoKey(e)]; }), iv);
     } catch (err) {
       container.innerHTML = '<div class="error-banner">No se pudo cargar el histórico: ' + escapeHtml(err.message) + '</div>';
     }
@@ -1114,8 +1194,22 @@
     try {
       await forzarActualizacion();
       var rows = await supaGet("estado_actual_legible?select=*&order=linea.asc,estacion.asc,nombre.asc");
+      /* La vista estado_actual_legible no trae `tipo`: se lo suma desde
+         accesos (catálogo de ~424 filas). Si falla, se clasifica por el
+         texto de la descripción. */
+      try {
+        var catalogo = await supaGet("accesos?select=linea,estacion,nombre,tipo&limit=1000");
+        var tipoPorClave = {};
+        catalogo.forEach(function (a) { tipoPorClave[accesoKey(a)] = a.tipo; });
+        rows.forEach(function (r) {
+          var t = tipoPorClave[accesoKey(r)];
+          r.tipo = t === undefined ? null : t;
+        });
+      } catch (err) {
+        /* sin tipo: categoriaEquipo() usa la descripción */
+      }
       window.__estadoRows = rows;
-      document.getElementById("ocultar-cronicos-n").textContent = " (" + rows.filter(noAnduvoEn7Dias).length + ")";
+      actualizarContadores();
       renderEstado();
     } catch (err) {
       document.getElementById("problemas-container").innerHTML = '<div class="error-banner">No se pudo conectar con la base: ' + escapeHtml(err.message) + '</div>';
