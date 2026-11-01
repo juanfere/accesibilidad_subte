@@ -779,6 +779,33 @@
     if (verMas) verMas.addEventListener("click", function () { renderProblemas(rows, true); });
   }
 
+  /* Orden de las estaciones dentro de cada línea: por su posición real en
+     el recorrido (LINEA_ORDEN, la misma lista que dibuja el trazado del
+     mapa), no alfabético. Se compara sin tildes, mayúsculas ni signos para
+     tolerar pequeñas diferencias de escritura. Una estación que no figure
+     en LINEA_ORDEN va al final, en orden alfabético. */
+  function normalizarNombre(s) {
+    return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  }
+  var POSICION_EN_LINEA = {};
+  Object.keys(LINEA_ORDEN).forEach(function (codigo) {
+    POSICION_EN_LINEA[codigo] = {};
+    LINEA_ORDEN[codigo].forEach(function (estacion, i) {
+      POSICION_EN_LINEA[codigo][normalizarNombre(estacion)] = i;
+    });
+  });
+  function ordenarEstaciones(codigo, nombres) {
+    var pos = POSICION_EN_LINEA[codigo] || {};
+    return nombres.slice().sort(function (a, b) {
+      var pa = pos[normalizarNombre(a)], pb = pos[normalizarNombre(b)];
+      if (pa === undefined && pb === undefined) return a.localeCompare(b);
+      if (pa === undefined) return 1;
+      if (pb === undefined) return -1;
+      return pa - pb;
+    });
+  }
+
   function renderLineas(rows) {
     var porLinea = {};
     rows.forEach(function (r) {
@@ -790,7 +817,11 @@
 
     var codigos = Object.keys(porLinea).sort();
     var html = codigos.map(function (codigo) {
-      var estaciones = Object.keys(porLinea[codigo]).sort();
+      var estaciones = ordenarEstaciones(codigo, Object.keys(porLinea[codigo]));
+      var orden = LINEA_ORDEN[codigo];
+      var ordenHtml = orden
+        ? '<div class="hint">Estaciones en orden de recorrido: ' + escapeHtml(orden[0]) + ' → ' + escapeHtml(orden[orden.length - 1]) + '</div>'
+        : "";
       var totalAccesos = estaciones.reduce(function (n, e) { return n + porLinea[codigo][e].length; }, 0);
       var caidosLinea = estaciones.reduce(function (n, e) {
         return n + porLinea[codigo][e].filter(function (a) { return !a.funcionando; }).length;
@@ -813,6 +844,7 @@
         '<summary><span class="linea-chip" style="background:' + lineaColor(codigo) + '"><span class="linea-dot"></span>Línea ' + escapeHtml(codigo) + '</span>' +
         '<span class="count">' + totalAccesos + ' accesos' + (caidosLinea ? " · " + caidosLinea + " caídos" : "") + '</span>' +
         '<span class="caret">▾</span></summary>' +
+        ordenHtml +
         '<div class="estacion-grid">' + estacionesHtml + '</div>' +
       '</details>';
     }).join("");
