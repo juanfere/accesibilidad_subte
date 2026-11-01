@@ -594,15 +594,15 @@
   var tipoFiltro = "todos";
 
   /* Clasifica un acceso. Usa `tipo` de la tabla accesos (0 = ascensor,
-     1 = escalera mecánica) y, para lo que no se puede resolver por ahí
-     (p. ej. salvaescaleras, que no tiene un código propio conocido, o
-     descripciones reemplazadas por "Cerrada por obras"), el texto. Los
+     1 = escalera mecánica, 2 = salvaescalera) y, como algunos salvaescaleras
+     y los caminos rodantes vienen con tipo 0, también el texto. Los
      caminos rodantes y lo no reconocible quedan como "otro": solo se ven
      con "Todos". */
   function categoriaEquipo(r) {
     var texto = (r.descripcion || "").toLowerCase();
     if (texto.indexOf("salvaescalera") !== -1) return "elevadores";
     if (texto.indexOf("camino rodante") !== -1) return "otro";
+    if (r.tipo === 2) return "elevadores"; /* 2 = salvaescalera (confirmado en la API de EMOVA) */
     if (r.tipo === 0) return "elevadores";
     if (r.tipo === 1) return "escaleras";
     if (texto.indexOf("ascensor") !== -1) return "elevadores";
