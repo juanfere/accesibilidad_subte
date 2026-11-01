@@ -14,7 +14,7 @@
 // configurarlas a mano como secrets).
 
 const EMOVA_URL =
-  "https://aplicacioneswp.metrovias.com.ar/APIAccesibilidad/Accesibilidad.svc/GetLineas";
+  "https://apiaccesibilidad.emova.com.ar/Accesibilidad.svc/getlineas";
 
 const DEBOUNCE_MS = 20_000;
 
