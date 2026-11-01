@@ -24,7 +24,8 @@ from datetime import datetime, timezone
 import requests
 from supabase import create_client
 
-URL = "https://aplicacioneswp.metrovias.com.ar/APIAccesibilidad/Accesibilidad.svc/GetLineas"
+URL = "https://apiaccesibilidad.emova.com.ar/Accesibilidad.svc/getlineas"
+
 
 _DATE_RE = re.compile(r"/Date\((-?\d+)([+-]\d{4})?\)/")
 
