@@ -236,6 +236,8 @@
   .estacion-grid { padding: 12px 14px; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
   .estacion-block { border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: var(--surface); }
   .estacion-block .est-name { font-weight: 600; font-size: 0.84rem; margin-bottom: 6px; }
+  .estacion-block .est-sin-medios { font-size: 0.8rem; color: var(--ink-secondary); }
+  .orden-nota { margin: 0; padding: 10px 14px 0; font-size: 0.8rem; color: var(--ink-secondary); }
   .acceso-row { display: flex; align-items: center; gap: 6px; font-size: 0.76rem; padding: 2px 0; color: var(--ink-secondary); }
   .status-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
   .status-dot.ok { background: var(--good); }
@@ -784,14 +786,40 @@
      mapa), no alfabético. Se compara sin tildes, mayúsculas ni signos para
      tolerar pequeñas diferencias de escritura. Una estación que no figure
      en LINEA_ORDEN va al final, en orden alfabético. */
+  /* Estaciones de la red que EMOVA informa como sin medios de elevación:
+     no tienen accesos en la API, así que no figuran en la base y hay que
+     listarlas aparte. `despuesDe` es la estación que las precede en el
+     recorrido. Si algún día la API empieza a devolver accesos para una de
+     ellas, se muestra como cualquier otra y esta entrada deja de usarse. */
+  var ESTACIONES_SIN_ACCESOS = [
+    { linea: "A", estacion: "Pasco", despuesDe: "Congreso" },
+    { linea: "A", estacion: "Alberti", despuesDe: "Pasco" },
+    { linea: "A", estacion: "Río de Janeiro", despuesDe: "Castro Barros" },
+    { linea: "D", estacion: "Scalabrini Ortiz", despuesDe: "Bulnes" },
+    { linea: "E", estacion: "Plaza de los Virreyes", despuesDe: "Varela" }
+  ];
+  var TEXTO_SIN_MEDIOS = "Esta estación no cuenta con medios de accesibilidad";
+
+  /* LINEA_ORDEN (que dibuja el mapa) solo tiene estaciones con accesos;
+     esta versión suma las que no tienen, en su lugar del recorrido. */
+  var LINEA_ORDEN_COMPLETO = {};
+  Object.keys(LINEA_ORDEN).forEach(function (codigo) {
+    LINEA_ORDEN_COMPLETO[codigo] = LINEA_ORDEN[codigo].slice();
+  });
+  ESTACIONES_SIN_ACCESOS.forEach(function (e) {
+    var lista = LINEA_ORDEN_COMPLETO[e.linea];
+    var i = lista.indexOf(e.despuesDe);
+    if (i === -1) lista.push(e.estacion); else lista.splice(i + 1, 0, e.estacion);
+  });
+
   function normalizarNombre(s) {
     return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
       .toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   }
   var POSICION_EN_LINEA = {};
-  Object.keys(LINEA_ORDEN).forEach(function (codigo) {
+  Object.keys(LINEA_ORDEN_COMPLETO).forEach(function (codigo) {
     POSICION_EN_LINEA[codigo] = {};
-    LINEA_ORDEN[codigo].forEach(function (estacion, i) {
+    LINEA_ORDEN_COMPLETO[codigo].forEach(function (estacion, i) {
       POSICION_EN_LINEA[codigo][normalizarNombre(estacion)] = i;
     });
   });
@@ -817,17 +845,29 @@
 
     var codigos = Object.keys(porLinea).sort();
     var html = codigos.map(function (codigo) {
-      var estaciones = ordenarEstaciones(codigo, Object.keys(porLinea[codigo]));
-      var orden = LINEA_ORDEN[codigo];
+      var nombresConAccesos = Object.keys(porLinea[codigo]);
+      var yaEstan = {};
+      nombresConAccesos.forEach(function (n) { yaEstan[normalizarNombre(n)] = true; });
+      /* Estaciones sin medios de elevación (no tienen filas en la base). */
+      var sinMedios = {};
+      ESTACIONES_SIN_ACCESOS.forEach(function (e) {
+        if (e.linea === codigo && !yaEstan[normalizarNombre(e.estacion)]) sinMedios[e.estacion] = true;
+      });
+      var estaciones = ordenarEstaciones(codigo, nombresConAccesos.concat(Object.keys(sinMedios)));
+      var orden = LINEA_ORDEN_COMPLETO[codigo];
       var ordenHtml = orden
-        ? '<div class="hint">Estaciones en orden de recorrido: ' + escapeHtml(orden[0]) + ' → ' + escapeHtml(orden[orden.length - 1]) + '</div>'
+        ? '<p class="orden-nota">Estaciones en orden de recorrido: ' + escapeHtml(orden[0]) + ' → ' + escapeHtml(orden[orden.length - 1]) + '</p>'
         : "";
-      var totalAccesos = estaciones.reduce(function (n, e) { return n + porLinea[codigo][e].length; }, 0);
-      var caidosLinea = estaciones.reduce(function (n, e) {
+      var totalAccesos = nombresConAccesos.reduce(function (n, e) { return n + porLinea[codigo][e].length; }, 0);
+      var caidosLinea = nombresConAccesos.reduce(function (n, e) {
         return n + porLinea[codigo][e].filter(function (a) { return !a.funcionando; }).length;
       }, 0);
 
       var estacionesHtml = estaciones.map(function (est) {
+        if (sinMedios[est]) {
+          return '<div class="estacion-block"><div class="est-name">' + escapeHtml(est) + '</div>' +
+            '<div class="est-sin-medios">' + escapeHtml(TEXTO_SIN_MEDIOS) + '</div></div>';
+        }
         var accesos = porLinea[codigo][est].sort(function (a, b) { return a.nombre.localeCompare(b.nombre); });
         var rowsHtml = accesos.map(function (a) {
           return '<div class="acceso-row ' + (a.funcionando ? "" : "down") + '" title="' + escapeHtml(describirEstado(a).detalle) + '">' +
