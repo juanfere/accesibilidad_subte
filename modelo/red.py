@@ -23,7 +23,8 @@ from pathlib import Path
 
 import yaml
 
-URL = "https://aplicacioneswp.metrovias.com.ar/APIAccesibilidad/Accesibilidad.svc/GetLineas"
+URL = "https://apiaccesibilidad.emova.com.ar/Accesibilidad.svc/getlineas";
+
 
 # Medios que puede usar cada perfil. Las escaleras fijas no figuran en ninguna
 # fuente, así que ningún perfil las contempla todavía.
